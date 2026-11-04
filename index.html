@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Free, ad-free static QR code generator. Runs entirely in your browser."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Static QR Generator</title>
+  </head>
+  <body>
+    <main class="card">
+      <header>
+        <h1>Static QR Generator</h1>
+        <p class="subtitle">
+          Your link is encoded directly. No redirects, no tracking, nothing leaves your device.
+        </p>
+      </header>
+
+      <!-- The form lets the Enter key trigger "Generate" for free. -->
+      <form id="qr-form" novalidate>
+        <label for="url-input" class="sr-only">Link to encode</label>
+        <div class="input-row">
+          <input
+            id="url-input"
+            type="text"
+            inputmode="url"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            placeholder="Paste your link, e.g. forms.gle/abc123"
+            aria-describedby="error-msg"
+          />
+          <button type="submit" class="btn primary">Generate</button>
+        </div>
+        <p id="error-msg" class="error" role="alert" hidden></p>
+
+        <details class="settings">
+          <summary>Settings</summary>
+          <div class="settings-grid">
+            <label>
+              <span>Size</span>
+              <select id="size-select">
+                <option value="256">256 px</option>
+                <option value="512" selected>512 px</option>
+                <option value="1024">1024 px</option>
+              </select>
+            </label>
+            <label>
+              <span>Error correction</span>
+              <select id="ecl-select">
+                <option value="L">L (7%)</option>
+                <option value="M" selected>M (15%)</option>
+                <option value="Q">Q (25%)</option>
+                <option value="H">H (30%)</option>
+              </select>
+            </label>
+            <label>
+              <span>Foreground</span>
+              <input id="fg-color" type="color" value="#000000" />
+            </label>
+            <label>
+              <span>Background</span>
+              <input id="bg-color" type="color" value="#ffffff" />
+            </label>
+          </div>
+          <p class="hint">
+            Tip: keep a dark foreground on a light background for the most reliable scanning.
+          </p>
+        </details>
+      </form>
+
+      <section id="result" class="result" hidden>
+        <div class="qr-frame">
+          <canvas id="qr-canvas" aria-label="Generated QR code"></canvas>
+        </div>
+        <p class="encoded">
+          Encodes: <code id="encoded-text"></code>
+        </p>
+        <div class="download-row">
+          <button id="download-png" type="button" class="btn">Download PNG</button>
+          <button id="download-svg" type="button" class="btn">Download SVG</button>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
