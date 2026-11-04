@@ -9,19 +9,24 @@ Many "free" QR websites make **dynamic** QR codes. The QR doesn't contain your l
 This tool makes **static** QR codes only:
 
 - The QR encodes **exactly** the link you type. Nothing is added or wrapped.
-- Generation happens **client-side** with the [`qrcode`](https://www.npmjs.com/package/qrcode) library. There's no backend, no API calls, and no database, so your link never leaves your device.
+- Generation happens **client-side** with [`qr-code-styling`](https://www.npmjs.com/package/qr-code-styling). There's no backend, no API calls, and no database, so your data never leaves your device.
 - No ads, popups, cookie banners, or analytics.
 
 You can confirm a QR is static: scan it and check that the link shown is your own URL, not some `qr-xyz.com/abc` short link.
 
 ## Features
 
-- Paste a link and press **Generate** (or Enter)
-- `https://` is added automatically if you leave it off (e.g. `forms.gle/abc`)
-- Shows the exact encoded link under the QR so you can verify it
-- Download as **PNG** (always at least 1024 px, with a quiet-zone margin for print) or **SVG**
-- Settings: size (256 / 512 / 1024 px), foreground/background colors, error correction level (L / M / Q / H)
-- Responsive layout with light and dark mode
+- **Live preview** that updates as you type, plus a **Generate** button (or Enter)
+- **QR types:** link, plain text, WiFi (`WIFI:` format with special characters escaped), WhatsApp (`wa.me`; Pakistani `03xx` numbers become `923xx`), email (`mailto:`) and phone (`tel:`)
+- Shows the exact encoded text under the QR so you can verify it (WiFi passwords are masked)
+- **Logo** in the center (upload or drag & drop). Error correction switches to H automatically
+- **Styles:** dot and corner shapes, 8 color presets, gradients, separate corner color, transparent background, margin
+- **Frame** with a label such as "Scan me", included in every download format
+- **Export** as PNG, SVG, JPEG or WEBP at 512, 1024 or 2048 px. **Copy** the image to the clipboard, or **Share** the PNG file on phones
+- **Scan check:** every QR is decoded in your browser with [`jsQR`](https://www.npmjs.com/package/jsqr), at full size and as a small, blurred copy that imitates a phone camera
+- Warnings for low contrast, thin margins and very dense codes
+- **Recent:** your last 5 QR codes, stored only in this browser. WiFi passwords and full logos are never saved
+- Light and dark mode (follows your system, or pick one), keyboard accessible, respects reduced motion
 
 ## Run locally
 
@@ -59,11 +64,22 @@ Every later `git push` to the main branch redeploys automatically.
 ## Project structure
 
 ```
-├── index.html        # Page markup
+├── index.html          # Page markup
 ├── src/
-│   ├── main.js       # Input validation, QR generation, downloads
-│   └── style.css     # Layout, responsive rules, light/dark theme
+│   ├── main.js         # Connects the controls to everything below
+│   ├── state.js        # All settings in one object, plus defaults
+│   ├── content.js      # Builds the text for each QR type, with validation
+│   ├── qr.js           # Draws the QR with qr-code-styling
+│   ├── logo.js         # Reads and prepares the uploaded logo
+│   ├── export.js       # Frame + label, downloads, copy, share
+│   ├── verify.js       # jsQR scan check (clean and degraded)
+│   ├── history.js      # Recent QRs in localStorage (no passwords)
+│   ├── color.js        # Contrast check
+│   ├── presets.js      # Color themes
+│   ├── storage.js      # Safe localStorage wrappers
+│   ├── ui.js           # Panels, toasts, theme toggle
+│   └── styles/         # tokens.css (colors, spacing), base, layout, components
 ├── public/
 │   └── favicon.svg
-└── package.json      # Pinned dependency versions
+└── package.json        # Pinned dependency versions
 ```
