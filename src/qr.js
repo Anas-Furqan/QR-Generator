@@ -1,4 +1,5 @@
 import QRCodeStyling from 'qr-code-styling';
+import { toUtf8ByteString } from './encoding.js';
 
 // How much of the code each level can rebuild if part of it is damaged or covered.
 export const ECL_RECOVERY = { L: 0.07, M: 0.15, Q: 0.25, H: 0.3 };
@@ -28,18 +29,6 @@ export const CORNER_STYLES = {
   rounded: { square: 'extra-rounded', dot: 'dot' },
   dot: { square: 'dot', dot: 'dot' },
 };
-
-/**
- * qr-code-styling turns each character into ONE byte (charCode & 255), which
- * garbles Urdu, emoji and accents. So we hand it the UTF-8 bytes instead,
- * one byte per character. Plain ASCII is unchanged; phones read the bytes
- * back as UTF-8, so "سلام 👋" scans as "سلام 👋".
- */
-function toUtf8ByteString(text) {
-  let out = '';
-  for (const byte of new TextEncoder().encode(text)) out += String.fromCharCode(byte);
-  return out;
-}
 
 /** The dot fill: either one solid color or a two-color gradient. */
 function dotPaint(s) {
