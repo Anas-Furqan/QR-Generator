@@ -60,26 +60,134 @@
             <div class="panel-body" id="panel-content">
               <div class="panel-inner">
                 <div class="panel-content">
-                  <!-- A form lets the Enter key trigger "Generate" for free. -->
-                  <form id="url-form" class="field" novalidate>
-                    <label class="field-label" for="url-input">Link</label>
-                    <div class="input-group">
-                      <input
-                        id="url-input"
-                        class="input"
-                        type="text"
-                        inputmode="url"
-                        autocomplete="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                        placeholder="forms.gle/abc123"
-                        aria-describedby="url-error"
-                      />
-                      <button type="submit" class="btn btn-primary">Generate</button>
+                  <!-- QR type tabs. Arrow keys move between tabs (see initTabs in main.js). -->
+                  <div class="tabs" role="tablist" aria-label="QR type">
+                    <button class="tab" role="tab" id="tab-url" data-type="url" aria-selected="true" aria-controls="tabpanel-url" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                      Link
+                    </button>
+                    <button class="tab" role="tab" id="tab-text" data-type="text" aria-selected="false" aria-controls="tabpanel-text" tabindex="-1" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg>
+                      Text
+                    </button>
+                    <button class="tab" role="tab" id="tab-wifi" data-type="wifi" aria-selected="false" aria-controls="tabpanel-wifi" tabindex="-1" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0"/><path d="M12 19.5h.01"/></svg>
+                      WiFi
+                    </button>
+                    <button class="tab" role="tab" id="tab-whatsapp" data-type="whatsapp" aria-selected="false" aria-controls="tabpanel-whatsapp" tabindex="-1" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l1.7-5A8.5 8.5 0 1 1 8 19.3z"/><path d="M9 10c0 2.5 2.5 5 5 5l1.2-1.2-2-1-1 .7c-.8-.4-1.4-1-1.8-1.8l.7-1-1-2z"/></svg>
+                      WhatsApp
+                    </button>
+                    <button class="tab" role="tab" id="tab-email" data-type="email" aria-selected="false" aria-controls="tabpanel-email" tabindex="-1" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                      Email
+                    </button>
+                    <button class="tab" role="tab" id="tab-phone" data-type="phone" aria-selected="false" aria-controls="tabpanel-phone" tabindex="-1" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+                      Phone
+                    </button>
+                  </div>
+
+                  <!-- One form around every tab, so Enter triggers "Generate" on any of them.
+                       Hidden tabs keep their values, so switching back never wipes your input. -->
+                  <form id="content-form" class="content-form" novalidate>
+                    <!-- Link -->
+                    <div class="tabpanel" id="tabpanel-url" role="tabpanel" aria-labelledby="tab-url" data-type="url">
+                      <div class="field">
+                        <label class="field-label" for="url-input">Link</label>
+                        <input id="url-input" name="url" class="input" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="forms.gle/abc123" />
+                        <p class="hint">https:// is added if you leave it off.</p>
+                      </div>
                     </div>
-                    <p id="url-error" class="error" hidden></p>
+
+                    <!-- Plain text -->
+                    <div class="tabpanel" id="tabpanel-text" role="tabpanel" aria-labelledby="tab-text" data-type="text" hidden>
+                      <div class="field">
+                        <div class="field-row">
+                          <label class="field-label" for="text-input">Text</label>
+                          <span id="text-count" class="field-value" aria-live="polite">0 / 1200</span>
+                        </div>
+                        <textarea id="text-input" name="text" class="input textarea" rows="4" placeholder="Any text: a note, a code, an address…"></textarea>
+                        <p class="hint">Scanned as plain text. Emoji and non-English letters use more of the limit.</p>
+                      </div>
+                    </div>
+
+                    <!-- WiFi -->
+                    <div class="tabpanel" id="tabpanel-wifi" role="tabpanel" aria-labelledby="tab-wifi" data-type="wifi" hidden>
+                      <div class="field">
+                        <label class="field-label" for="wifi-ssid">Network name (SSID)</label>
+                        <input id="wifi-ssid" name="ssid" class="input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="MyHomeWiFi" />
+                      </div>
+                      <div class="field">
+                        <label class="field-label" for="wifi-security">Security</label>
+                        <select id="wifi-security" name="security" class="input select">
+                          <option value="WPA" selected>WPA / WPA2 / WPA3 (most common)</option>
+                          <option value="WEP">WEP (old routers)</option>
+                          <option value="nopass">None (open network)</option>
+                        </select>
+                      </div>
+                      <div class="field" id="wifi-password-field">
+                        <label class="field-label" for="wifi-password">Password</label>
+                        <div class="input-wrap">
+                          <input id="wifi-password" name="password" class="input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                          <button id="wifi-password-toggle" class="input-action" type="button" aria-label="Show password" aria-pressed="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                      <label class="switch">
+                        <span>Hidden network</span>
+                        <input id="wifi-hidden" name="hidden" type="checkbox" />
+                      </label>
+                      <p class="hint">Phones join the network when scanned. Special characters are handled for you.</p>
+                    </div>
+
+                    <!-- WhatsApp -->
+                    <div class="tabpanel" id="tabpanel-whatsapp" role="tabpanel" aria-labelledby="tab-whatsapp" data-type="whatsapp" hidden>
+                      <div class="field">
+                        <label class="field-label" for="wa-phone">WhatsApp number</label>
+                        <input id="wa-phone" name="phone" class="input" type="tel" inputmode="tel" autocomplete="off" placeholder="0300 1234567 or +92 300 1234567" aria-describedby="wa-preview" />
+                        <p id="wa-preview" class="field-preview" aria-live="polite" hidden></p>
+                      </div>
+                      <div class="field">
+                        <label class="field-label" for="wa-message">Prefilled message <span class="optional">optional</span></label>
+                        <textarea id="wa-message" name="message" class="input textarea" rows="3" placeholder="Hi! I scanned your QR code."></textarea>
+                      </div>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="tabpanel" id="tabpanel-email" role="tabpanel" aria-labelledby="tab-email" data-type="email" hidden>
+                      <div class="field">
+                        <label class="field-label" for="email-to">Email address</label>
+                        <input id="email-to" name="to" class="input" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="you@example.com" />
+                      </div>
+                      <div class="field">
+                        <label class="field-label" for="email-subject">Subject <span class="optional">optional</span></label>
+                        <input id="email-subject" name="subject" class="input" type="text" />
+                      </div>
+                      <div class="field">
+                        <label class="field-label" for="email-body">Message <span class="optional">optional</span></label>
+                        <textarea id="email-body" name="body" class="input textarea" rows="3"></textarea>
+                      </div>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="tabpanel" id="tabpanel-phone" role="tabpanel" aria-labelledby="tab-phone" data-type="phone" hidden>
+                      <div class="field">
+                        <label class="field-label" for="phone-input">Phone number</label>
+                        <input id="phone-input" name="phone" class="input" type="tel" inputmode="tel" autocomplete="off" placeholder="+92 300 1234567" aria-describedby="phone-preview" />
+                        <p id="phone-preview" class="field-preview" aria-live="polite" hidden></p>
+                        <p class="hint">Start with + and the country code so it works from abroad.</p>
+                      </div>
+                    </div>
+
+                    <p id="content-error" class="error" role="alert" hidden></p>
+
+                    <div class="form-actions">
+                      <button type="submit" class="btn btn-primary">Generate</button>
+                      <span class="hint">The preview updates as you type.</span>
+                    </div>
                   </form>
-                  <p class="hint">The preview updates as you type. https:// is added if you leave it off.</p>
                 </div>
               </div>
             </div>
