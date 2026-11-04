@@ -3,6 +3,7 @@
  * and the QR is always redrawn from it. This keeps the UI and the QR in sync.
  */
 export const DEFAULTS = Object.freeze({
+  type: 'url', // active QR type tab: url | text | wifi | whatsapp | email | phone
   data: '', // the exact text encoded in the QR
   ecl: 'M', // error correction level: L, M, Q or H
 

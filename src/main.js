@@ -6,7 +6,13 @@ import './styles/layout.css';
 import './styles/components.css';
 
 import { state, DEFAULTS, STYLE_KEYS } from './state.js';
-import { normalizeUrl } from './content.js';
+import {
+  BUILDERS,
+  MAX_TEXT_BYTES,
+  byteLength,
+  normalizePhone,
+  normalizeWhatsApp,
+} from './content.js';
 import { renderPreview, renderSwatch } from './qr.js';
 import { contrastProblem } from './color.js';
 import { PRESETS } from './presets.js';
@@ -17,9 +23,21 @@ import { debounce, initPanels, initThemeToggle, toast } from './ui.js';
 const $ = (id) => document.getElementById(id);
 
 // --- Elements ---
-const urlForm = $('url-form');
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+const contentForm = $('content-form');
+const contentError = $('content-error');
 const urlInput = $('url-input');
-const urlError = $('url-error');
+const textInput = $('text-input');
+const textCount = $('text-count');
+const wifiSecurity = $('wifi-security');
+const wifiPassword = $('wifi-password');
+const wifiPasswordField = $('wifi-password-field');
+const wifiPasswordToggle = $('wifi-password-toggle');
+const waPhone = $('wa-phone');
+const waPreview = $('wa-preview');
+const phoneInput = $('phone-input');
+const phonePreview = $('phone-preview');
+const qrEmptyText = document.querySelector('#qr-empty span');
 const stage = $('qr-stage');
 const qrContainer = $('qr-container');
 const qrEmpty = $('qr-empty');
@@ -93,74 +111,161 @@ function render({ animate = false } = {}) {
     return;
   }
   encodedText.textContent = state.data;
-  renderPreview(qrContainer, state, { animate });
+  try {
+    renderPreview(qrContainer, state, { animate });
+  } catch (err) {
+    // The QR library throws if the content can't fit in any QR size.
+    console.error(err);
+    showError('That’s too much content for one QR code. Please shorten it.');
+  }
 }
 
-/* ================= Content (URL input) ================= */
+/* ================= Content: QR type tabs ================= */
 
-function showError(message) {
-  urlError.textContent = message;
-  urlError.hidden = false;
-  urlInput.setAttribute('aria-invalid', 'true');
+const EMPTY_MESSAGES = {
+  url: 'Paste a link to see your QR code',
+  text: 'Type some text to see your QR code',
+  wifi: 'Enter your WiFi details to see your QR code',
+  whatsapp: 'Enter a WhatsApp number to see your QR code',
+  email: 'Enter an email address to see your QR code',
+  phone: 'Enter a phone number to see your QR code',
+};
+
+const panelFor = (type) => $(`tabpanel-${type}`);
+
+/** Collect the active tab's fields into an object, e.g. { ssid, password, ... }. */
+function readFields(type) {
+  const fields = {};
+  for (const el of panelFor(type).querySelectorAll('[name]')) {
+    fields[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+  }
+  return fields;
+}
+
+function showError(message, field) {
+  contentError.textContent = message;
+  contentError.hidden = false;
+  const input = field && panelFor(state.type).querySelector(`[name="${field}"]`);
+  if (input) input.setAttribute('aria-invalid', 'true');
 }
 
 function clearError() {
-  urlError.hidden = true;
-  urlInput.removeAttribute('aria-invalid');
+  contentError.hidden = true;
+  for (const el of contentForm.querySelectorAll('[aria-invalid]')) el.removeAttribute('aria-invalid');
 }
 
 /**
- * Read the input and update the QR. While typing we stay quiet about errors
- * (half-typed links are always "invalid") and just dim the old QR instead.
- * Errors are shown when the user presses Generate or leaves the field.
+ * Build the QR text from the active tab and update the preview.
+ * While typing we stay quiet about errors (half-typed input is always
+ * "invalid") and just dim the old QR. Errors appear on Generate, or when the
+ * user leaves the field that has the problem.
+ *   showErrors: true = show every error, or the name of one field to check.
+ *   switching: true when called right after changing tabs.
  */
-function updateFromInput({ showErrors }) {
-  const raw = urlInput.value;
-  if (!raw.trim()) {
-    clearError();
-    stage.classList.remove('is-stale');
-    if (showErrors) showError('Please paste a link first.');
-    if (state.data) {
+function updateContent({ showErrors = false, switching = false } = {}) {
+  const result = BUILDERS[state.type](readFields(state.type));
+  const shouldShow = showErrors === true || (showErrors && showErrors === result.field);
+
+  if (result.text === undefined) {
+    // Nothing valid yet. After a tab switch, don't keep showing the old tab's QR.
+    const clear = result.empty || switching;
+    stage.classList.toggle('is-stale', !clear && Boolean(state.data));
+    if (shouldShow && result.error) showError(result.error, result.field);
+    if (clear && state.data) {
       state.data = '';
       render();
     }
     return null;
   }
 
-  const { text, error } = normalizeUrl(raw);
-  if (error) {
-    stage.classList.toggle('is-stale', Boolean(state.data));
-    if (showErrors) showError(error);
-    return null;
-  }
-
   clearError();
   stage.classList.remove('is-stale');
-  if (text !== state.data) {
-    state.data = text;
+  if (result.text !== state.data) {
+    state.data = result.text;
     render({ animate: true });
   }
-  return text;
+  return result.text;
 }
 
 // Live preview: redraw ~300ms after the user stops typing.
-const livePreview = debounce(() => updateFromInput({ showErrors: false }), 300);
+const livePreview = debounce(() => updateContent(), 300);
 
-urlInput.addEventListener('input', () => {
-  if (!urlError.hidden) clearError();
+contentForm.addEventListener('input', () => {
+  if (!contentError.hidden) clearError();
+  updateHelpers();
   livePreview();
 });
 
-urlInput.addEventListener('blur', () => {
-  if (urlInput.value.trim()) updateFromInput({ showErrors: true });
+// Leaving a field shows its error (only for that field, not the whole form).
+contentForm.addEventListener('focusout', (event) => {
+  const field = event.target.name;
+  if (field && event.target.value) updateContent({ showErrors: field });
 });
 
 // The Generate button (and Enter key) update immediately and show errors.
-urlForm.addEventListener('submit', (event) => {
+contentForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  const text = updateFromInput({ showErrors: true });
-  if (text) urlInput.value = text; // show the https:// we added
+  const text = updateContent({ showErrors: true });
+  if (text && state.type === 'url') urlInput.value = text; // show the https:// we added
 });
+
+/** Live helpers under the inputs: text counter, phone previews, WiFi password. */
+function updateHelpers() {
+  textCount.textContent = `${byteLength(textInput.value)} / ${MAX_TEXT_BYTES}`;
+
+  const wa = normalizeWhatsApp(waPhone.value);
+  waPreview.hidden = !wa.digits;
+  if (wa.digits) waPreview.textContent = `✓ Opens a chat with ${wa.display}`;
+
+  const phone = normalizePhone(phoneInput.value);
+  phonePreview.hidden = !phone.number;
+  if (phone.number) phonePreview.textContent = `✓ Calls ${phone.display}`;
+
+  wifiPasswordField.hidden = wifiSecurity.value === 'nopass';
+}
+
+wifiPasswordToggle.addEventListener('click', () => {
+  const show = wifiPassword.type === 'password';
+  wifiPassword.type = show ? 'text' : 'password';
+  wifiPasswordToggle.setAttribute('aria-pressed', String(show));
+  wifiPasswordToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+});
+
+/**
+ * Accessible tabs: click or use ←/→/Home/End. Only the selected tab is in the
+ * Tab-key order (tabindex 0); the panels just get hidden, so their values stay.
+ */
+function selectTab(type, { focus = false } = {}) {
+  state.type = type;
+  for (const tab of tabs) {
+    const selected = tab.dataset.type === type;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    if (selected && focus) tab.focus();
+  }
+  for (const panel of contentForm.querySelectorAll('.tabpanel')) {
+    panel.hidden = panel.dataset.type !== type;
+  }
+  qrEmptyText.textContent = EMPTY_MESSAGES[type];
+  clearError();
+  updateContent({ switching: true });
+}
+
+for (const tab of tabs) {
+  tab.addEventListener('click', () => selectTab(tab.dataset.type));
+  tab.addEventListener('keydown', (event) => {
+    const i = tabs.indexOf(tab);
+    const next = {
+      ArrowRight: tabs[(i + 1) % tabs.length],
+      ArrowLeft: tabs[(i - 1 + tabs.length) % tabs.length],
+      Home: tabs[0],
+      End: tabs[tabs.length - 1],
+    }[event.key];
+    if (!next) return;
+    event.preventDefault();
+    selectTab(next.dataset.type, { focus: true });
+  });
+}
 
 /* ================= Error correction ================= */
 
@@ -409,4 +514,5 @@ $('mobile-download').addEventListener('click', () => download('png'));
 initPanels();
 initThemeToggle();
 syncControls();
+updateHelpers();
 render();
