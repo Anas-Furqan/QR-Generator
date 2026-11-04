@@ -425,14 +425,20 @@ async function handleLogoFile(file) {
   render({ animate: true });
 }
 
-function removeLogo() {
+/** Forget the logo (shared by the × button and restoring from Recent). */
+function clearLogo() {
   state.logoSrc = null;
   state.logo = null;
   state.logoName = '';
   logoInput.value = '';
   logoOptions.hidden = true;
-  setEcl(eclBeforeLogo ?? 'M');
   eclBeforeLogo = null;
+}
+
+function removeLogo() {
+  const previous = eclBeforeLogo;
+  clearLogo();
+  setEcl(previous ?? 'M');
   render({ animate: true });
   logoInput.focus();
 }
@@ -779,6 +785,9 @@ function restoreEntry(entry) {
     if (el.type === 'checkbox') el.checked = Boolean(value);
     else el.value = typeof value === 'string' ? value : '';
   }
+
+  // The saved QR had no logo: remove the current one so the result matches.
+  if (!entry.logoName && state.logo) clearLogo();
 
   // Style settings: only copy known keys with the right type.
   for (const key of SAVED_STYLE_KEYS) {
