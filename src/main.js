@@ -52,6 +52,7 @@ const gradientOptions = $('gradient-options');
 const cornerToggle = $('corner-toggle');
 const cornerOptions = $('corner-options');
 const transparentToggle = $('transparent-toggle');
+const transparentNote = $('transparent-note');
 const bgField = $('bg-field');
 const fgLabel = $('fg-label');
 const contrastWarning = $('contrast-warning');
@@ -289,6 +290,7 @@ function syncControls() {
   cornerOptions.hidden = !state.cornerCustom;
 
   transparentToggle.checked = state.transparent;
+  transparentNote.hidden = !state.transparent;
   bgField.classList.toggle('is-disabled', state.transparent);
 
   syncPresets();
