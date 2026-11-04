@@ -5,9 +5,11 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/components.css';
 
-import { state } from './state.js';
+import { state, DEFAULTS, STYLE_KEYS } from './state.js';
 import { normalizeUrl } from './content.js';
-import { renderPreview } from './qr.js';
+import { renderPreview, renderSwatch } from './qr.js';
+import { contrastProblem } from './color.js';
+import { PRESETS } from './presets.js';
 import { validateLogoFile, readAsDataURL, composeLogo } from './logo.js';
 import { downloadQR } from './export.js';
 import { debounce, initPanels, initThemeToggle, toast } from './ui.js';
@@ -38,10 +40,43 @@ const logoEclNote = $('logo-ecl-note');
 const logoEclWarning = $('logo-ecl-warning');
 
 const eclRadios = document.querySelectorAll('input[name="ecl"]');
-const fgColor = $('fg-color');
-const bgColor = $('bg-color');
+const dotRadios = document.querySelectorAll('input[name="dotType"]');
+const cornerRadios = document.querySelectorAll('input[name="cornerType"]');
+const gradientTypeRadios = document.querySelectorAll('input[name="gradientType"]');
+const marginInput = $('margin');
+const marginValue = $('margin-value');
+const marginWarning = $('margin-warning');
+
+const gradientToggle = $('gradient-toggle');
+const gradientOptions = $('gradient-options');
+const cornerToggle = $('corner-toggle');
+const cornerOptions = $('corner-options');
+const transparentToggle = $('transparent-toggle');
+const bgField = $('bg-field');
+const fgLabel = $('fg-label');
+const contrastWarning = $('contrast-warning');
+const contrastMessage = $('contrast-message');
+const previewWarning = $('preview-warning');
+const presetsEl = $('presets');
+
+// Color pickers: input element + the state key it controls.
+const colorInputs = [
+  [$('fg-color'), 'fg'],
+  [$('fg2-color'), 'fg2'],
+  [$('bg-color'), 'bg'],
+  [$('corner-color'), 'cornerColor'],
+];
 
 /* ================= Rendering ================= */
+
+/** Show or hide the contrast and margin warnings for the current state. */
+function updateWarnings() {
+  const problem = contrastProblem(state);
+  contrastWarning.hidden = !problem;
+  contrastMessage.textContent = problem ?? '';
+  previewWarning.hidden = !problem || !state.data;
+  marginWarning.hidden = state.margin >= 4;
+}
 
 /** Redraw the preview (or the empty state) from the current state. */
 function render({ animate = false } = {}) {
@@ -49,6 +84,8 @@ function render({ animate = false } = {}) {
   qrEmpty.hidden = hasData;
   encodedWrap.hidden = !hasData;
   for (const button of downloadButtons) button.disabled = !hasData;
+  stage.classList.toggle('is-transparent', state.transparent && hasData);
+  updateWarnings();
 
   if (!hasData) {
     qrContainer.replaceChildren();
@@ -220,18 +257,133 @@ logoPlate.addEventListener('change', async () => {
   render();
 });
 
+/* ================= Style + colors: state → controls ================= */
+
+function checkRadio(radios, value) {
+  for (const radio of radios) radio.checked = radio.value === value;
+}
+
+/**
+ * Make every style control show what's in `state`. Called after anything
+ * that changes many settings at once (a preset or Reset), so the UI never
+ * goes out of sync with the QR.
+ */
+function syncControls() {
+  checkRadio(dotRadios, state.dotType);
+  checkRadio(cornerRadios, state.cornerType);
+  checkRadio(gradientTypeRadios, state.gradientType);
+
+  marginInput.value = state.margin;
+  marginValue.textContent = `${state.margin}%`;
+
+  for (const [input, key] of colorInputs) {
+    input.value = state[key];
+    $(`${key}-value`).textContent = state[key];
+  }
+
+  gradientToggle.checked = state.gradient;
+  gradientOptions.hidden = !state.gradient;
+  fgLabel.textContent = state.gradient ? 'First color' : 'Foreground';
+
+  cornerToggle.checked = state.cornerCustom;
+  cornerOptions.hidden = !state.cornerCustom;
+
+  transparentToggle.checked = state.transparent;
+  bgField.classList.toggle('is-disabled', state.transparent);
+
+  syncPresets();
+}
+
+/** Change one setting, update the controls, and redraw. */
+function setStyle(key, value) {
+  state[key] = value;
+  syncControls();
+  render();
+}
+
+/* ================= Shapes ================= */
+
+// Draw each swatch picture once, using the real QR library.
+for (const tile of document.querySelectorAll('[data-dot]')) {
+  renderSwatch(tile, { dotType: tile.dataset.dot });
+}
+for (const tile of document.querySelectorAll('[data-corner]')) {
+  renderSwatch(tile, { cornerType: tile.dataset.corner });
+}
+
+for (const radio of dotRadios) {
+  radio.addEventListener('change', () => setStyle('dotType', radio.value));
+}
+for (const radio of cornerRadios) {
+  radio.addEventListener('change', () => setStyle('cornerType', radio.value));
+}
+marginInput.addEventListener('input', () => setStyle('margin', Number(marginInput.value)));
+
 /* ================= Colors ================= */
 
-function bindColor(input, key) {
-  const label = $(`${key}-value`);
-  input.addEventListener('input', () => {
-    state[key] = input.value;
-    label.textContent = input.value;
-    render();
-  });
+for (const [input, key] of colorInputs) {
+  input.addEventListener('input', () => setStyle(key, input.value));
 }
-bindColor(fgColor, 'fg');
-bindColor(bgColor, 'bg');
+for (const radio of gradientTypeRadios) {
+  radio.addEventListener('change', () => setStyle('gradientType', radio.value));
+}
+gradientToggle.addEventListener('change', () => setStyle('gradient', gradientToggle.checked));
+cornerToggle.addEventListener('change', () => setStyle('cornerCustom', cornerToggle.checked));
+transparentToggle.addEventListener('change', () =>
+  setStyle('transparent', transparentToggle.checked),
+);
+
+/* ================= Presets ================= */
+
+// The keys a preset sets (everything except its id and display name).
+const presetKeys = (preset) => Object.keys(preset).filter((k) => k !== 'id' && k !== 'name');
+
+// A preset is "active" when every color it sets matches the current state.
+function syncPresets() {
+  for (const button of presetsEl.children) {
+    const preset = PRESETS.find((p) => p.id === button.dataset.preset);
+    const active = presetKeys(preset).every((k) => state[k] === preset[k]);
+    button.setAttribute('aria-pressed', String(active));
+  }
+}
+
+for (const preset of PRESETS) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'preset';
+  button.dataset.preset = preset.id;
+  button.title = preset.name;
+
+  // The chip previews the preset: background ring, dot color (or gradient).
+  const chip = document.createElement('span');
+  chip.className = 'preset-chip';
+  chip.setAttribute('aria-hidden', 'true');
+  chip.style.setProperty('--chip-bg', preset.bg);
+  chip.style.setProperty(
+    '--chip-fg',
+    preset.gradient ? `linear-gradient(135deg, ${preset.fg}, ${preset.fg2})` : preset.fg,
+  );
+  if (preset.cornerCustom) chip.style.setProperty('--chip-corner', preset.cornerColor);
+
+  button.append(chip, preset.name.replace(' gradient', ''));
+  button.addEventListener('click', () => {
+    for (const key of presetKeys(preset)) state[key] = preset[key];
+    syncControls();
+    render({ animate: true });
+  });
+  presetsEl.append(button);
+}
+
+/* ================= Reset ================= */
+
+$('reset-style').addEventListener('click', () => {
+  for (const key of STYLE_KEYS) state[key] = DEFAULTS[key];
+  // Keep H while a logo is on, otherwise go back to the default level.
+  setEcl(state.logo ? 'H' : DEFAULTS.ecl);
+  syncControls();
+  render({ animate: true });
+  toast('Style reset to default');
+});
 
 /* ================= Downloads ================= */
 
@@ -254,4 +406,5 @@ $('mobile-download').addEventListener('click', () => download('png'));
 
 initPanels();
 initThemeToggle();
+syncControls();
 render();
