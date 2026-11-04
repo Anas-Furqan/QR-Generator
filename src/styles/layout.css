@@ -111,6 +111,11 @@
 }
 
 @media (max-width: 919px) {
+  /* Keep keyboard-focused controls from scrolling under the sticky bar. */
+  html {
+    scroll-padding-bottom: calc(var(--mobile-bar-h) + var(--space-4));
+  }
+
   body {
     padding-bottom: calc(var(--mobile-bar-h) + env(safe-area-inset-bottom));
   }
