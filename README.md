@@ -2,6 +2,12 @@
 
 A small, ad-free QR code generator that runs entirely in your browser.
 
+**Live demo:** https://your-project.vercel.app <!-- TODO: replace with your Vercel URL after deploying -->
+
+| Light | Dark |
+| --- | --- |
+| ![Static QR in light mode: link form on the left, framed QR preview with "Scan me" label on the right](docs/screenshot-light.png) | ![Static QR in dark mode](docs/screenshot-dark.png) |
+
 ## Why this exists
 
 Many "free" QR websites make **dynamic** QR codes. The QR doesn't contain your link. It contains a link to *their* redirect server, which then forwards people to you. That lets them add ad pages, tracking, or paywalls later, and the QR breaks if they shut down.
@@ -46,6 +52,19 @@ npm run build
 npm run preview
 ```
 
+## Tests
+
+```bash
+npm test
+```
+
+Fast unit tests (Node's built-in test runner, no extra packages) for the parts that are easy to get subtly wrong:
+
+- QR text builders: WiFi escaping, WhatsApp number cleanup, email/phone links, URL handling
+- UTF-8 encoding, so Urdu and emoji scan correctly
+- Contrast check and color presets
+- Recent history: WiFi passwords are never stored, storage-full handling
+
 ## Deploy to Vercel
 
 No configuration file is needed. Vercel detects Vite automatically.
@@ -60,6 +79,8 @@ No configuration file is needed. Vercel detects Vite automatically.
 5. Click **Deploy**. After about a minute you'll get a live URL like `your-project.vercel.app`.
 
 Every later `git push` to the main branch redeploys automatically.
+
+**Link previews:** when you share the site on WhatsApp or LinkedIn it shows `public/og-image.png`. Those apps need the image's full address, so `vite.config.js` fills in your site URL at build time. On Vercel this is automatic. If you add a custom domain, set an environment variable `SITE_URL` (for example `https://qr.example.com`) in the Vercel project settings.
 
 ## Project structure
 
@@ -78,8 +99,11 @@ Every later `git push` to the main branch redeploys automatically.
 │   ├── presets.js      # Color themes
 │   ├── storage.js      # Safe localStorage wrappers
 │   ├── ui.js           # Panels, toasts, theme toggle
+│   ├── encoding.js     # UTF-8 conversion for the QR library
 │   └── styles/         # tokens.css (colors, spacing), base, layout, components
-├── public/
-│   └── favicon.svg
+├── test/               # Unit tests (npm test)
+├── public/             # favicon, og-image.png, apple-touch-icon.png, robots.txt
+├── docs/               # README screenshots
+├── vite.config.js      # Fills in the site URL for link previews
 └── package.json        # Pinned dependency versions
 ```
