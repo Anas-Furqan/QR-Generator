@@ -1,0 +1,141 @@
+/*
+ * Design tokens: every color, size and timing lives here as a CSS variable.
+ * Change a value once and the whole app follows.
+ */
+:root {
+  /* Type */
+  --font: 'Plus Jakarta Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+  --text-xl: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  --tracking-tight: -0.03em;
+  --tracking-snug: -0.015em;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radii */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 0.15s;
+  --dur: 0.28s;
+
+  /* Layout */
+  --content-max: 1180px;
+  --preview-width: 440px;
+  --mobile-bar-h: 76px;
+
+  /* Light theme colors */
+  --bg: #f4f3ef;
+  --bg-glow: rgba(91, 61, 245, 0.07);
+  --surface: #ffffff;
+  --surface-2: #f9f8f6;
+  --surface-3: #f1efeb;
+  --border: #e6e3dc;
+  --border-strong: #d4d0c7;
+  --text: #17161b;
+  --text-2: #55525c;
+  --text-3: #85828c;
+  --accent: #5b3df5;
+  --accent-hover: #4a2de0;
+  --accent-soft: #efebff;
+  --accent-text: #4a2de0;
+  --on-accent: #ffffff;
+  --focus: #5b3df5;
+  --danger: #b42318;
+  --danger-soft: #fef1ef;
+  --success: #12733f;
+  --success-soft: #e9f7ef;
+  --warning: #9a5b00;
+  --warning-soft: #fff6e5;
+  --qr-stage: #ffffff;
+
+  --shadow-sm: 0 1px 2px rgba(23, 22, 27, 0.05);
+  --shadow-md: 0 1px 2px rgba(23, 22, 27, 0.04), 0 4px 12px rgba(23, 22, 27, 0.05);
+  --shadow-lg: 0 1px 2px rgba(23, 22, 27, 0.04), 0 8px 24px rgba(23, 22, 27, 0.06),
+    0 24px 48px rgba(23, 22, 27, 0.06);
+
+  color-scheme: light;
+}
+
+/* Dark theme: used when the system is dark (unless the user forced light)... */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e0e11;
+    --bg-glow: rgba(124, 99, 255, 0.1);
+    --surface: #17171c;
+    --surface-2: #1c1c22;
+    --surface-3: #24242b;
+    --border: #2a2a32;
+    --border-strong: #3a3a44;
+    --text: #f2f1f5;
+    --text-2: #b4b2bc;
+    --text-3: #85838e;
+    --accent: #7c63ff;
+    --accent-hover: #9380ff;
+    --accent-soft: #241f3d;
+    --accent-text: #b3a5ff;
+    --on-accent: #ffffff;
+    --focus: #9a87ff;
+    --danger: #ff8f84;
+    --danger-soft: #3a1a18;
+    --success: #5fd394;
+    --success-soft: #12291d;
+    --warning: #ffc266;
+    --warning-soft: #33260f;
+    --qr-stage: #ffffff;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35),
+      0 24px 48px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+
+/* ...or when the user picked dark with the toggle. */
+:root[data-theme='dark'] {
+  --bg: #0e0e11;
+  --bg-glow: rgba(124, 99, 255, 0.1);
+  --surface: #17171c;
+  --surface-2: #1c1c22;
+  --surface-3: #24242b;
+  --border: #2a2a32;
+  --border-strong: #3a3a44;
+  --text: #f2f1f5;
+  --text-2: #b4b2bc;
+  --text-3: #85838e;
+  --accent: #7c63ff;
+  --accent-hover: #9380ff;
+  --accent-soft: #241f3d;
+  --accent-text: #b3a5ff;
+  --on-accent: #ffffff;
+  --focus: #9a87ff;
+  --danger: #ff8f84;
+  --danger-soft: #3a1a18;
+  --success: #5fd394;
+  --success-soft: #12291d;
+  --warning: #ffc266;
+  --warning-soft: #33260f;
+  --qr-stage: #ffffff;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35),
+    0 24px 48px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
