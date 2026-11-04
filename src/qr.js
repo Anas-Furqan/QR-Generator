@@ -29,6 +29,18 @@ export const CORNER_STYLES = {
   dot: { square: 'dot', dot: 'dot' },
 };
 
+/**
+ * qr-code-styling turns each character into ONE byte (charCode & 255), which
+ * garbles Urdu, emoji and accents. So we hand it the UTF-8 bytes instead,
+ * one byte per character. Plain ASCII is unchanged; phones read the bytes
+ * back as UTF-8, so "سلام 👋" scans as "سلام 👋".
+ */
+function toUtf8ByteString(text) {
+  let out = '';
+  for (const byte of new TextEncoder().encode(text)) out += String.fromCharCode(byte);
+  return out;
+}
+
 /** The dot fill: either one solid color or a two-color gradient. */
 function dotPaint(s) {
   if (!s.gradient) return { color: s.fg };
@@ -57,7 +69,7 @@ export function buildOptions(s, size, type = 'svg') {
     width: size,
     height: size,
     type,
-    data: s.data, // encoded exactly as-is, nothing added
+    data: toUtf8ByteString(s.data), // exact text, nothing added (UTF-8 encoded)
     margin: Math.round((size * s.margin) / 100),
     qrOptions: { errorCorrectionLevel: s.ecl },
     dotsOptions: { type: s.dotType, ...dotPaint(s) },
