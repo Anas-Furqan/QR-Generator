@@ -1,178 +1,257 @@
-import QRCode from 'qrcode';
-import './style.css';
+// Self-hosted font: bundled by Vite, so no request goes to Google Fonts.
+import '@fontsource-variable/plus-jakarta-sans';
+import './styles/tokens.css';
+import './styles/base.css';
+import './styles/layout.css';
+import './styles/components.css';
 
-// --- Grab the elements we need from index.html ---
-const form = document.getElementById('qr-form');
-const input = document.getElementById('url-input');
-const errorMsg = document.getElementById('error-msg');
-const sizeSelect = document.getElementById('size-select');
-const eclSelect = document.getElementById('ecl-select');
-const fgColor = document.getElementById('fg-color');
-const bgColor = document.getElementById('bg-color');
-const result = document.getElementById('result');
-const canvas = document.getElementById('qr-canvas');
-const encodedText = document.getElementById('encoded-text');
-const pngButton = document.getElementById('download-png');
-const svgButton = document.getElementById('download-svg');
+import { state } from './state.js';
+import { normalizeUrl } from './content.js';
+import { renderPreview } from './qr.js';
+import { validateLogoFile, readAsDataURL, composeLogo } from './logo.js';
+import { downloadQR } from './export.js';
+import { debounce, initPanels, initThemeToggle, toast } from './ui.js';
 
-// The exact text currently encoded in the QR (null until first generate).
-let currentText = null;
+const $ = (id) => document.getElementById(id);
 
-// Quiet zone: the blank border around the QR, measured in "modules"
-// (one module = one small square). The QR spec recommends 4.
-const QUIET_ZONE = 4;
+// --- Elements ---
+const urlForm = $('url-form');
+const urlInput = $('url-input');
+const urlError = $('url-error');
+const stage = $('qr-stage');
+const qrContainer = $('qr-container');
+const qrEmpty = $('qr-empty');
+const encodedWrap = $('encoded-wrap');
+const encodedText = $('encoded-text');
+const downloadButtons = [$('download-png'), $('download-svg'), $('mobile-download')];
 
-// Downloaded PNGs are never smaller than this, so they print sharply.
-const MIN_PNG_SIZE = 1024;
+const logoDropzone = $('logo-dropzone');
+const logoInput = $('logo-input');
+const logoOptions = $('logo-options');
+const logoThumb = $('logo-thumb');
+const logoName = $('logo-name');
+const logoRemove = $('logo-remove');
+const logoSize = $('logo-size');
+const logoSizeValue = $('logo-size-value');
+const logoPlate = $('logo-plate');
+const logoEclNote = $('logo-ecl-note');
+const logoEclWarning = $('logo-ecl-warning');
 
-/**
- * Turn whatever the user typed into the exact string we will encode.
- * Returns { text } on success or { error } on failure.
- */
-function normalizeInput(raw) {
-  const value = raw.trim();
+const eclRadios = document.querySelectorAll('input[name="ecl"]');
+const fgColor = $('fg-color');
+const bgColor = $('bg-color');
 
-  if (!value) {
-    return { error: 'Please paste a link first.' };
+/* ================= Rendering ================= */
+
+/** Redraw the preview (or the empty state) from the current state. */
+function render({ animate = false } = {}) {
+  const hasData = Boolean(state.data);
+  qrEmpty.hidden = hasData;
+  encodedWrap.hidden = !hasData;
+  for (const button of downloadButtons) button.disabled = !hasData;
+
+  if (!hasData) {
+    qrContainer.replaceChildren();
+    return;
   }
-  if (/\s/.test(value)) {
-    return { error: 'Links can’t contain spaces. Please check what you pasted.' };
-  }
-
-  // "forms.gle/abc" -> "https://forms.gle/abc". Links that already start
-  // with http:// or https:// are left exactly as typed.
-  const text = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-
-  // Let the browser's URL parser decide if it's a real URL.
-  let url;
-  try {
-    url = new URL(text);
-  } catch {
-    return { error: 'That doesn’t look like a valid link. Example: https://forms.gle/abc123' };
-  }
-
-  // Require a real-looking host like "example.com" (or localhost).
-  const host = url.hostname;
-  const looksLikeHost = host === 'localhost' || /^[^.]+(\.[^.]+)+$/.test(host);
-  if (!looksLikeHost) {
-    return { error: 'That link is missing a domain, like example.com.' };
-  }
-
-  // Important: we return `text`, not `url.href`. The URL parser may tweak
-  // the link (e.g. add a trailing slash), and we want the QR to contain
-  // exactly what the user gave us.
-  return { text };
+  encodedText.textContent = state.data;
+  renderPreview(qrContainer, state, { animate });
 }
 
-/** Collect the current settings into options for the qrcode library. */
-function qrOptions(width) {
-  return {
-    width, // final image size in pixels
-    margin: QUIET_ZONE,
-    errorCorrectionLevel: eclSelect.value,
-    color: {
-      dark: fgColor.value, // the squares
-      light: bgColor.value, // the background + quiet zone
-    },
-  };
-}
+/* ================= Content (URL input) ================= */
 
 function showError(message) {
-  errorMsg.textContent = message;
-  errorMsg.hidden = false;
-  input.setAttribute('aria-invalid', 'true');
+  urlError.textContent = message;
+  urlError.hidden = false;
+  urlInput.setAttribute('aria-invalid', 'true');
 }
 
 function clearError() {
-  errorMsg.hidden = true;
-  errorMsg.textContent = '';
-  input.removeAttribute('aria-invalid');
+  urlError.hidden = true;
+  urlInput.removeAttribute('aria-invalid');
 }
 
 /**
- * How the QR is generated:
- * The `qrcode` library turns the text into a grid of black/white modules
- * and draws it straight onto our <canvas>. Everything runs in the browser;
- * no request is made to any server.
+ * Read the input and update the QR. While typing we stay quiet about errors
+ * (half-typed links are always "invalid") and just dim the old QR instead.
+ * Errors are shown when the user presses Generate or leaves the field.
  */
-async function renderQR() {
-  if (currentText === null) return;
-  try {
-    await QRCode.toCanvas(canvas, currentText, qrOptions(Number(sizeSelect.value)));
-    encodedText.textContent = currentText;
-    result.hidden = false;
-  } catch (err) {
-    // Happens if the text is too long to fit in a QR code.
-    console.error(err);
-    showError('Couldn’t create a QR for that link. It may be too long.');
-    result.hidden = true;
+function updateFromInput({ showErrors }) {
+  const raw = urlInput.value;
+  if (!raw.trim()) {
+    clearError();
+    stage.classList.remove('is-stale');
+    if (showErrors) showError('Please paste a link first.');
+    if (state.data) {
+      state.data = '';
+      render();
+    }
+    return null;
   }
-}
 
-/**
- * How downloads work:
- * We build the file in memory (a Blob), give it a temporary local URL,
- * and "click" an invisible <a download> link pointing at it. The browser
- * then saves it like any other download. Nothing is uploaded anywhere.
- */
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  // Free the memory once the browser has started the download.
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-async function downloadPNG() {
-  if (currentText === null) return;
-  // Render a separate, high-resolution copy instead of reusing the on-screen
-  // canvas, so the PNG is at least 1024px even if the preview is smaller.
-  const width = Math.max(Number(sizeSelect.value), MIN_PNG_SIZE);
-  const bigCanvas = document.createElement('canvas');
-  await QRCode.toCanvas(bigCanvas, currentText, qrOptions(width));
-  bigCanvas.toBlob((blob) => downloadBlob(blob, 'qr-code.png'), 'image/png');
-}
-
-async function downloadSVG() {
-  if (currentText === null) return;
-  // SVG is vector, so it stays sharp at any print size.
-  const svg = await QRCode.toString(currentText, {
-    ...qrOptions(Number(sizeSelect.value)),
-    type: 'svg',
-  });
-  downloadBlob(new Blob([svg], { type: 'image/svg+xml' }), 'qr-code.svg');
-}
-
-// --- Wire up events ---
-
-// Submitting the form covers both the Generate button and the Enter key.
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
-  clearError();
-
-  const { text, error } = normalizeInput(input.value);
+  const { text, error } = normalizeUrl(raw);
   if (error) {
-    showError(error);
+    stage.classList.toggle('is-stale', Boolean(state.data));
+    if (showErrors) showError(error);
+    return null;
+  }
+
+  clearError();
+  stage.classList.remove('is-stale');
+  if (text !== state.data) {
+    state.data = text;
+    render({ animate: true });
+  }
+  return text;
+}
+
+// Live preview: redraw ~300ms after the user stops typing.
+const livePreview = debounce(() => updateFromInput({ showErrors: false }), 300);
+
+urlInput.addEventListener('input', () => {
+  if (!urlError.hidden) clearError();
+  livePreview();
+});
+
+urlInput.addEventListener('blur', () => {
+  if (urlInput.value.trim()) updateFromInput({ showErrors: true });
+});
+
+// The Generate button (and Enter key) update immediately and show errors.
+urlForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = updateFromInput({ showErrors: true });
+  if (text) urlInput.value = text; // show the https:// we added
+});
+
+/* ================= Error correction ================= */
+
+// Remembers the user's level from before a logo forced it to H.
+let eclBeforeLogo = null;
+
+function setEcl(level) {
+  state.ecl = level;
+  for (const radio of eclRadios) radio.checked = radio.value === level;
+  syncLogoNotes();
+}
+
+// With a logo, explain why we picked H, or warn if the user lowered it.
+function syncLogoNotes() {
+  const lowEcl = Boolean(state.logo) && state.ecl !== 'H';
+  logoEclNote.hidden = lowEcl;
+  logoEclWarning.hidden = !lowEcl;
+}
+
+for (const radio of eclRadios) {
+  radio.addEventListener('change', () => {
+    setEcl(radio.value);
+    render();
+  });
+}
+
+/* ================= Logo ================= */
+
+async function handleLogoFile(file) {
+  if (!file) return;
+  const error = validateLogoFile(file);
+  if (error) {
+    toast(error, 'error');
     return;
   }
 
-  // Show the user the final link (e.g. with https:// added).
-  input.value = text;
-  currentText = text;
-  renderQR();
-});
+  try {
+    state.logoSrc = await readAsDataURL(file);
+    state.logo = await composeLogo(state.logoSrc, state.logoPlate);
+  } catch {
+    state.logoSrc = null;
+    state.logo = null;
+    toast('Couldn’t read that image. Try another file.', 'error');
+    return;
+  }
 
-// Clear a stale error as soon as the user starts fixing their input.
-input.addEventListener('input', clearError);
+  state.logoName = file.name;
+  logoThumb.src = state.logoSrc;
+  logoName.textContent = file.name;
+  logoOptions.hidden = false;
 
-// Re-draw the QR live when any setting changes.
-for (const el of [sizeSelect, eclSelect, fgColor, bgColor]) {
-  el.addEventListener('input', renderQR);
+  // Switch to H the first time a logo is added, and remember the old level.
+  if (eclBeforeLogo === null) eclBeforeLogo = state.ecl;
+  setEcl('H');
+  render({ animate: true });
 }
 
-pngButton.addEventListener('click', downloadPNG);
-svgButton.addEventListener('click', downloadSVG);
+function removeLogo() {
+  state.logoSrc = null;
+  state.logo = null;
+  state.logoName = '';
+  logoInput.value = '';
+  logoOptions.hidden = true;
+  setEcl(eclBeforeLogo ?? 'M');
+  eclBeforeLogo = null;
+  render({ animate: true });
+  logoInput.focus();
+}
+
+logoInput.addEventListener('change', () => handleLogoFile(logoInput.files[0]));
+logoRemove.addEventListener('click', removeLogo);
+
+// Drag-and-drop: highlight the zone while a file hovers, read it on drop.
+logoDropzone.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  logoDropzone.classList.add('is-dragging');
+});
+logoDropzone.addEventListener('dragleave', () => logoDropzone.classList.remove('is-dragging'));
+logoDropzone.addEventListener('drop', (event) => {
+  event.preventDefault();
+  logoDropzone.classList.remove('is-dragging');
+  handleLogoFile(event.dataTransfer.files[0]);
+});
+
+logoSize.addEventListener('input', () => {
+  state.logoSize = Number(logoSize.value);
+  logoSizeValue.textContent = `${state.logoSize}%`;
+  render();
+});
+
+logoPlate.addEventListener('change', async () => {
+  state.logoPlate = logoPlate.checked;
+  if (!state.logoSrc) return;
+  state.logo = await composeLogo(state.logoSrc, state.logoPlate);
+  render();
+});
+
+/* ================= Colors ================= */
+
+function bindColor(input, key) {
+  const label = $(`${key}-value`);
+  input.addEventListener('input', () => {
+    state[key] = input.value;
+    label.textContent = input.value;
+    render();
+  });
+}
+bindColor(fgColor, 'fg');
+bindColor(bgColor, 'bg');
+
+/* ================= Downloads ================= */
+
+async function download(extension) {
+  if (!state.data) return;
+  try {
+    const filename = await downloadQR(state, extension);
+    toast(`Downloaded ${filename}`);
+  } catch (err) {
+    console.error(err);
+    toast('Download failed. Please try again.', 'error');
+  }
+}
+
+$('download-png').addEventListener('click', () => download('png'));
+$('download-svg').addEventListener('click', () => download('svg'));
+$('mobile-download').addEventListener('click', () => download('png'));
+
+/* ================= Start ================= */
+
+initPanels();
+initThemeToggle();
+render();

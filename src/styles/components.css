@@ -293,6 +293,16 @@
   color: var(--accent-text);
 }
 
+.note-warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+.note-warning svg {
+  color: var(--warning);
+}
+
 .hint {
   font-size: var(--text-sm);
   color: var(--text-3);

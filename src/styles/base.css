@@ -51,6 +51,11 @@ svg {
   max-width: 100%;
 }
 
+/* Make the `hidden` attribute win over component display rules. */
+[hidden] {
+  display: none !important;
+}
+
 /* One consistent focus ring for everything keyboard-focusable. */
 :focus-visible {
   outline: 2px solid var(--focus);
