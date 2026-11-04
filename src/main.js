@@ -636,7 +636,7 @@ for (const radio of sizeRadios) {
 async function download() {
   if (!state.data) return;
   try {
-    const filename = await downloadQR(state);
+    const filename = await downloadQR({ ...state }); // snapshot: settings can change while rendering
     toast(`Downloaded ${filename}`);
     saveRecent();
   } catch (err) {
@@ -652,7 +652,7 @@ async function copy() {
     return;
   }
   try {
-    await copyQR(state);
+    await copyQR({ ...state });
     toast('Copied to clipboard');
     saveRecent();
   } catch (err) {
@@ -664,7 +664,7 @@ async function copy() {
 async function share() {
   if (!state.data) return;
   try {
-    await shareQR(state);
+    await shareQR({ ...state });
     saveRecent();
   } catch (err) {
     // AbortError = the user closed the share sheet; that's not an error.

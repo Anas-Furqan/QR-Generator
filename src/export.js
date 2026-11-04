@@ -179,8 +179,11 @@ function downloadBlob(blob, filename) {
 
 /** Save the QR in the chosen format and size. Returns the filename. */
 export async function downloadQR(s) {
-  const blob = await exportBlob(s);
-  const filename = `qr-code.${FORMATS[s.exportFormat].ext}`;
+  // Read the settings once, up front: rendering takes a moment, and the user
+  // could change the format meanwhile (we'd save an SVG named .png).
+  const { exportFormat, exportSize } = s;
+  const blob = await exportBlob(s, exportFormat, exportSize);
+  const filename = `qr-code.${FORMATS[exportFormat].ext}`;
   downloadBlob(blob, filename);
   return filename;
 }
