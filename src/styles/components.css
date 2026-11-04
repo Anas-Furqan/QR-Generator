@@ -613,14 +613,20 @@ input[type='range'] {
 }
 
 /* The QR always sits on white so it reads well in dark mode too. */
+/* Container query root: inside it, 1cqw = 1% of the preview width. */
+.qr-stage-wrap {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
 .qr-stage {
   position: relative;
   display: grid;
   place-items: center;
   width: 100%;
-  max-width: 300px;
   aspect-ratio: 1;
-  margin: 0 auto;
   background: var(--qr-stage);
   border-radius: var(--radius);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -628,7 +634,7 @@ input[type='range'] {
 }
 
 @media (min-width: 920px) {
-  .qr-stage {
+  .qr-stage-wrap {
     max-width: none;
   }
 }
@@ -691,9 +697,17 @@ input[type='range'] {
 }
 
 .preview-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.preview-actions .btn-primary {
+  flex: 1 1 160px;
+}
+
+.preview-actions .btn:not(.btn-primary) {
+  flex: 1 1 auto;
 }
 
 /* ================= Toasts ================= */
@@ -1159,4 +1173,202 @@ input[type='range'] {
   margin-left: var(--space-1);
   font-weight: 500;
   color: var(--text-3);
+}
+
+/* ================= Frame in the preview =================
+ * Same proportions as export.js (FRAME): 4.5% border, 17% label band,
+ * 7% outer radius, 3% inner radius, all relative to the preview width. */
+.qr-stage.is-framed {
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: auto;
+  padding: 4.5cqw 4.5cqw 0;
+  background: var(--frame-color, #000);
+  border-radius: 7cqw;
+  box-shadow: none;
+}
+
+.qr-stage.is-framed.no-label {
+  padding-bottom: 4.5cqw;
+}
+
+.qr-stage.is-framed .qr-container {
+  height: auto;
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: 3cqw;
+  overflow: hidden;
+}
+
+.qr-frame-label {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 17cqw;
+  font-size: var(--label-size, 7.5cqw);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--frame-text, #fff);
+}
+
+/* ================= Scan check badge ================= */
+.scan-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--dur) var(--ease),
+    color var(--dur) var(--ease);
+}
+
+.scan-badge[data-state='checking'] {
+  color: var(--text-3);
+  background: var(--surface-3);
+}
+
+.scan-badge[data-state='ok'] {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.scan-badge[data-state='warn'] {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.scan-badge[data-state='fail'] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+/* ================= Frame options ================= */
+.frame-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.chip:active {
+  transform: scale(0.96);
+}
+
+.segmented small {
+  text-align: center;
+}
+
+/* ================= Recent QRs ================= */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+}
+
+.history-item:hover {
+  border-color: var(--accent);
+}
+
+.history-item:active {
+  transform: scale(0.99);
+}
+
+.history-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.history-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.history-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}
+
+.history-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.history-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+/* ================= Mobile bar share button ================= */
+.mobile-share {
+  flex: 0 0 52px;
+  padding: 0;
 }

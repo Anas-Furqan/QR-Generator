@@ -410,6 +410,119 @@
             </div>
           </section>
 
+          <!-- Frame -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-frame">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="2" width="18" height="20" rx="3"/><rect x="7" y="5" width="10" height="10" rx="1"/><path d="M8 19h8"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Frame</span>
+                  <span class="panel-sub">Border and a label like “Scan me”</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-frame">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <label class="switch">
+                    <span>
+                      Add frame with label
+                      <small class="switch-hint">Included in every download format.</small>
+                    </span>
+                    <input id="frame-toggle" type="checkbox" />
+                  </label>
+                  <div id="frame-options" class="frame-options" hidden>
+                    <div class="field">
+                      <label class="field-label" for="frame-label">Label</label>
+                      <input id="frame-label" class="input" type="text" maxlength="40" value="Scan me" />
+                      <div class="chips" role="group" aria-label="Label suggestions">
+                        <button class="chip" type="button" data-label="Scan me">Scan me</button>
+                        <button class="chip" type="button" data-label="Scan to open">Scan to open</button>
+                        <button class="chip" type="button" data-label="Scan for WiFi">Scan for WiFi</button>
+                        <button class="chip" type="button" data-label="Chat on WhatsApp">Chat on WhatsApp</button>
+                      </div>
+                    </div>
+                    <label class="color-field">
+                      <input id="frame-color" type="color" value="#000000" />
+                      <span>Frame color<code id="frameColor-value">#000000</code></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Export -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-export">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Export</span>
+                  <span class="panel-sub">File format and size</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-export">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <fieldset class="field fieldset">
+                    <legend class="field-label">Format</legend>
+                    <div class="segmented">
+                      <label><input type="radio" name="exportFormat" value="png" checked /><span>PNG<small>Best for most</small></span></label>
+                      <label><input type="radio" name="exportFormat" value="svg" /><span>SVG<small>Print / vector</small></span></label>
+                      <label><input type="radio" name="exportFormat" value="jpeg" /><span>JPEG<small>No transparency</small></span></label>
+                      <label><input type="radio" name="exportFormat" value="webp" /><span>WEBP<small>Small file</small></span></label>
+                    </div>
+                  </fieldset>
+                  <fieldset class="field fieldset">
+                    <legend class="field-label">Size (width)</legend>
+                    <div class="segmented">
+                      <label><input type="radio" name="exportSize" value="512" /><span>512 px</span></label>
+                      <label><input type="radio" name="exportSize" value="1024" checked /><span>1024 px</span></label>
+                      <label><input type="radio" name="exportSize" value="2048" /><span>2048 px</span></label>
+                    </div>
+                  </fieldset>
+                  <p class="hint">Use 1024 px or more for printing. SVG stays sharp at any size.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Recent -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-recent">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Recent</span>
+                  <span class="panel-sub">Your last 5 QR codes, on this device only</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-recent">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <!-- Filled from localStorage by renderHistory() in main.js -->
+                  <ul id="history-list" class="history-list"></ul>
+                  <p id="history-empty" class="hint">
+                    QR codes you download, copy or share show up here. WiFi passwords are never saved.
+                  </p>
+                  <button id="history-clear" class="btn btn-ghost" type="button" hidden>Clear history</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <button id="reset-style" class="btn btn-ghost" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
             Reset style to default
@@ -424,13 +537,21 @@
               <span class="live-dot">Live</span>
             </div>
 
-            <div id="qr-stage" class="qr-stage">
-              <div id="qr-container" class="qr-container" role="img" aria-label="Generated QR code"></div>
-              <div id="qr-empty" class="qr-empty">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm8-2h3v3h-3zm5 0h3v3h-3zm-5 5h3v3h-3zm5 0h3v3h-3z"/></svg>
-                <span>Paste a link to see your QR code</span>
+            <!-- The wrapper is a CSS "container", so the frame can be sized in cqw
+                 (percent of the preview width), matching the exported image. -->
+            <div class="qr-stage-wrap">
+              <div id="qr-stage" class="qr-stage">
+                <div id="qr-container" class="qr-container" role="img" aria-label="Generated QR code"></div>
+                <div id="qr-frame-label" class="qr-frame-label" aria-hidden="true" hidden></div>
+                <div id="qr-empty" class="qr-empty">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm8-2h3v3h-3zm5 0h3v3h-3zm-5 5h3v3h-3zm5 0h3v3h-3z"/></svg>
+                  <span>Paste a link to see your QR code</span>
+                </div>
               </div>
             </div>
+
+            <!-- Result of the jsQR scan check (see verify.js) -->
+            <p id="scan-badge" class="scan-badge" data-state="checking" aria-live="polite" hidden></p>
 
             <p id="preview-warning" class="preview-warning" hidden>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
@@ -447,11 +568,18 @@
             </p>
 
             <div class="preview-actions">
-              <button id="download-png" class="btn btn-primary" type="button" disabled>
+              <button id="download-btn" class="btn btn-primary" type="button" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
-                Download PNG
+                <span class="download-label">Download PNG</span>
               </button>
-              <button id="download-svg" class="btn" type="button" disabled>SVG</button>
+              <button id="copy-btn" class="btn" type="button" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+                Copy
+              </button>
+              <button id="share-btn" class="btn" type="button" disabled hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+                Share
+              </button>
             </div>
           </div>
         </aside>
@@ -464,7 +592,10 @@
     <div class="mobile-bar">
       <button id="mobile-download" class="btn btn-primary btn-block" type="button" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
-        Download PNG
+        <span class="download-label">Download PNG</span>
+      </button>
+      <button id="mobile-share" class="btn mobile-share" type="button" aria-label="Share QR image" disabled hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </button>
     </div>
 
