@@ -11,6 +11,33 @@ export const MAX_TEXT_BYTES = 1200;
 
 export const byteLength = (s) => new TextEncoder().encode(s).length;
 
+/*
+ * More data = more, smaller squares = harder to scan from a distance.
+ * Above these sizes (in bytes) we warn; the hard cap above still applies.
+ */
+const DENSE_BYTES = 300;
+const VERY_DENSE_BYTES = 600;
+
+/** Returns null, or { level: 'mild' | 'strong', message } for the preview card. */
+export function densityProblem(bytes, hasLogo) {
+  if (bytes > VERY_DENSE_BYTES) {
+    return {
+      level: 'strong',
+      message: hasLogo
+        ? 'This QR is very dense and the logo hides even more of it. Many phones will struggle, especially from a distance or when printed small. Remove the logo and shorten the content.'
+        : 'This QR is very dense. Many phones will struggle to scan it, especially from a distance or when printed small. Shorten the content if you can.',
+    };
+  }
+  if (bytes > DENSE_BYTES) {
+    return {
+      level: hasLogo ? 'strong' : 'mild',
+      message:
+        'This QR is getting dense and may be hard to scan from a distance. Keep text short or remove the logo.',
+    };
+  }
+  return null;
+}
+
 /* ---------------- URL ---------------- */
 
 export function buildUrl({ url = '' }) {

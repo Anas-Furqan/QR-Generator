@@ -292,6 +292,17 @@
   color: var(--warning);
 }
 
+/* Stronger version for problems that will likely stop scanning. */
+.note-danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.note-danger svg {
+  color: var(--danger);
+}
+
 .hint {
   font-size: var(--text-sm);
   color: var(--text-3);

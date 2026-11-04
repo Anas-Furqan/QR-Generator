@@ -10,6 +10,7 @@ import {
   BUILDERS,
   MAX_TEXT_BYTES,
   byteLength,
+  densityProblem,
   maskWifiPassword,
   normalizePhone,
   normalizeWhatsApp,
@@ -77,6 +78,8 @@ const fgLabel = $('fg-label');
 const contrastWarning = $('contrast-warning');
 const contrastMessage = $('contrast-message');
 const previewWarning = $('preview-warning');
+const densityWarning = $('density-warning');
+const densityMessage = $('density-message');
 const presetsEl = $('presets');
 
 // Color pickers: input element + the state key it controls.
@@ -96,6 +99,11 @@ function updateWarnings() {
   contrastMessage.textContent = problem ?? '';
   previewWarning.hidden = !problem || !state.data;
   marginWarning.hidden = state.margin >= 4;
+
+  const density = densityProblem(byteLength(state.data), Boolean(state.logo));
+  densityWarning.hidden = !density;
+  densityWarning.classList.toggle('note-danger', density?.level === 'strong');
+  densityMessage.textContent = density?.message ?? '';
 }
 
 /** Redraw the preview (or the empty state) from the current state. */
