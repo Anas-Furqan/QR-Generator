@@ -211,6 +211,17 @@
   color: var(--text-3);
 }
 
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
 .input {
   width: 100%;
   min-width: 0;

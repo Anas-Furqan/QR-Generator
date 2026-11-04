@@ -2,90 +2,257 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
-      content="Free, ad-free static QR code generator. Runs entirely in your browser."
+      content="Free, ad-free static QR code generator with logos and custom styles. Runs entirely in your browser."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Static QR Generator</title>
+    <!-- Apply the saved theme before first paint so there is no flash. -->
+    <script>
+      try {
+        const t = localStorage.getItem('qr-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
   </head>
   <body>
-    <main class="card">
-      <header>
-        <h1>Static QR Generator</h1>
-        <p class="subtitle">
-          Your link is encoded directly. No redirects, no tracking, nothing leaves your device.
-        </p>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm8-2h3v3h-3zm5 0h3v3h-3zm-5 5h3v3h-3zm5 0h3v3h-3z" />
+          </svg>
+          <span>Static QR</span>
+        </div>
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="Theme: system">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+        </button>
       </header>
 
-      <!-- The form lets the Enter key trigger "Generate" for free. -->
-      <form id="qr-form" novalidate>
-        <label for="url-input" class="sr-only">Link to encode</label>
-        <div class="input-row">
-          <input
-            id="url-input"
-            type="text"
-            inputmode="url"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-            placeholder="Paste your link, e.g. forms.gle/abc123"
-            aria-describedby="error-msg"
-          />
-          <button type="submit" class="btn primary">Generate</button>
-        </div>
-        <p id="error-msg" class="error" role="alert" hidden></p>
-
-        <details class="settings">
-          <summary>Settings</summary>
-          <div class="settings-grid">
-            <label>
-              <span>Size</span>
-              <select id="size-select">
-                <option value="256">256 px</option>
-                <option value="512" selected>512 px</option>
-                <option value="1024">1024 px</option>
-              </select>
-            </label>
-            <label>
-              <span>Error correction</span>
-              <select id="ecl-select">
-                <option value="L">L (7%)</option>
-                <option value="M" selected>M (15%)</option>
-                <option value="Q">Q (25%)</option>
-                <option value="H">H (30%)</option>
-              </select>
-            </label>
-            <label>
-              <span>Foreground</span>
-              <input id="fg-color" type="color" value="#000000" />
-            </label>
-            <label>
-              <span>Background</span>
-              <input id="bg-color" type="color" value="#ffffff" />
-            </label>
+      <main class="layout">
+        <!-- ============ Controls (left on desktop) ============ -->
+        <div class="controls-col">
+          <div class="intro">
+            <h1>QR codes that point straight to your link.</h1>
+            <p>
+              No redirects, no tracking, no expiry. Everything is generated in your browser,
+              so your link never leaves this device.
+            </p>
           </div>
-          <p class="hint">
-            Tip: keep a dark foreground on a light background for the most reliable scanning.
-          </p>
-        </details>
-      </form>
 
-      <section id="result" class="result" hidden>
-        <div class="qr-frame">
-          <canvas id="qr-canvas" aria-label="Generated QR code"></canvas>
+          <!-- Content -->
+          <section class="panel" data-open="true">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="true" aria-controls="panel-content">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Content</span>
+                  <span class="panel-sub">What the QR opens</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-content">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <!-- A form lets the Enter key trigger "Generate" for free. -->
+                  <form id="url-form" class="field" novalidate>
+                    <label class="field-label" for="url-input">Link</label>
+                    <div class="input-group">
+                      <input
+                        id="url-input"
+                        class="input"
+                        type="text"
+                        inputmode="url"
+                        autocomplete="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        placeholder="forms.gle/abc123"
+                        aria-describedby="url-error"
+                      />
+                      <button type="submit" class="btn btn-primary">Generate</button>
+                    </div>
+                    <p id="url-error" class="error" hidden></p>
+                  </form>
+                  <p class="hint">The preview updates as you type. https:// is added if you leave it off.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Logo -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-logo">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Logo</span>
+                  <span class="panel-sub">Optional image in the center</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-logo">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <label class="dropzone" id="logo-dropzone">
+                    <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                    <strong>Upload a logo</strong>
+                    <span class="hint">Click or drag &amp; drop · PNG, JPG, SVG, WEBP · max 2 MB</span>
+                    <input id="logo-input" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" />
+                  </label>
+
+                  <div id="logo-options" class="logo-options" hidden>
+                    <div class="logo-preview">
+                      <img id="logo-thumb" alt="Uploaded logo" />
+                      <span id="logo-name" class="logo-preview-name"></span>
+                      <button id="logo-remove" class="icon-btn" type="button" aria-label="Remove logo">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+
+                    <div class="field">
+                      <div class="field-row">
+                        <label class="field-label" for="logo-size">Logo size</label>
+                        <output id="logo-size-value" class="field-value" for="logo-size">20%</output>
+                      </div>
+                      <input id="logo-size" type="range" min="10" max="25" step="1" value="20" />
+                    </div>
+
+                    <label class="switch">
+                      <span>White background behind logo</span>
+                      <input id="logo-plate" type="checkbox" checked />
+                    </label>
+
+                    <p class="note">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+                      <span>
+                        Error correction switched to <strong>H (30%)</strong>. The logo covers part of
+                        the code, and H lets phones rebuild up to 30% of missing data.
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Style -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-style">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="3.5"/><rect x="3" y="14" width="7" height="7" rx="3.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Style</span>
+                  <span class="panel-sub">Error correction</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-style">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <fieldset class="field fieldset">
+                    <legend class="field-label">Error correction</legend>
+                    <div class="segmented" id="ecl-group">
+                      <label><input type="radio" name="ecl" value="L" /><span>L<small>7%</small></span></label>
+                      <label><input type="radio" name="ecl" value="M" checked /><span>M<small>15%</small></span></label>
+                      <label><input type="radio" name="ecl" value="Q" /><span>Q<small>25%</small></span></label>
+                      <label><input type="radio" name="ecl" value="H" /><span>H<small>30%</small></span></label>
+                    </div>
+                  </fieldset>
+                  <p class="hint">Higher levels survive damage and logos better, but make the code denser.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Colors -->
+          <section class="panel" data-open="false">
+            <h2>
+              <button class="panel-toggle" type="button" aria-expanded="false" aria-controls="panel-colors">
+                <span class="panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4 4h-2.5a1.5 1.5 0 0 0-1 2.6c.6.6.5 1.6-.2 2.2-.6.5-1.4 1.2-2.3 1.2z"/><circle cx="7.5" cy="10.5" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16.5" cy="10.5" r="1"/></svg>
+                </span>
+                <span class="panel-heading">
+                  <span class="panel-title">Colors</span>
+                  <span class="panel-sub">Foreground and background</span>
+                </span>
+                <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+            </h2>
+            <div class="panel-body" id="panel-colors">
+              <div class="panel-inner">
+                <div class="panel-content">
+                  <div class="color-grid">
+                    <label class="color-field">
+                      <input id="fg-color" type="color" value="#000000" />
+                      <span>Foreground<code id="fg-value">#000000</code></span>
+                    </label>
+                    <label class="color-field">
+                      <input id="bg-color" type="color" value="#ffffff" />
+                      <span>Background<code id="bg-value">#ffffff</code></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-        <p class="encoded">
-          Encodes: <code id="encoded-text"></code>
-        </p>
-        <div class="download-row">
-          <button id="download-png" type="button" class="btn">Download PNG</button>
-          <button id="download-svg" type="button" class="btn">Download SVG</button>
-        </div>
-      </section>
-    </main>
+
+        <!-- ============ Preview (right on desktop, top on mobile) ============ -->
+        <aside class="preview-col" aria-label="QR preview">
+          <div class="preview-card">
+            <div class="preview-head">
+              <h2>Preview</h2>
+              <span class="live-dot">Live</span>
+            </div>
+
+            <div id="qr-stage" class="qr-stage">
+              <div id="qr-container" class="qr-container" role="img" aria-label="Generated QR code"></div>
+              <div id="qr-empty" class="qr-empty">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3zm2 2v4h4V5zm8-2h8v8h-8zm2 2v4h4V5zM3 13h8v8H3zm2 2v4h4v-4zm8-2h3v3h-3zm5 0h3v3h-3zm-5 5h3v3h-3zm5 0h3v3h-3z"/></svg>
+                <span>Paste a link to see your QR code</span>
+              </div>
+            </div>
+
+            <p id="encoded-wrap" class="encoded" hidden>
+              Encodes <code id="encoded-text"></code>
+            </p>
+
+            <div class="preview-actions">
+              <button id="download-png" class="btn btn-primary" type="button" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
+                Download PNG
+              </button>
+              <button id="download-svg" class="btn" type="button" disabled>SVG</button>
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="footer">100% client-side · No tracking · Static QR codes never expire</footer>
+    </div>
+
+    <!-- Sticky download bar, shown on phones only -->
+    <div class="mobile-bar">
+      <button id="mobile-download" class="btn btn-primary btn-block" type="button" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 18v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"/></svg>
+        Download PNG
+      </button>
+    </div>
+
+    <!-- Toasts are announced to screen readers through aria-live. -->
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 
     <script type="module" src="/src/main.js"></script>
   </body>
