@@ -21,7 +21,17 @@ export default defineConfig({
   plugins: [
     {
       name: 'site-url',
-      transformIndexHtml: (html) => html.replaceAll('__SITE_URL__', siteUrl()),
+      transformIndexHtml(html) {
+        const url = siteUrl();
+        if (!url) {
+          // Without a known address, a relative canonical/og:url would be
+          // invalid, so leave those two tags out (og:image still works locally).
+          html = html
+            .replace(/\s*<link rel="canonical"[^>]*>/, '')
+            .replace(/\s*<meta property="og:url"[^>]*>/, '');
+        }
+        return html.replaceAll('__SITE_URL__', url);
+      },
     },
   ],
 });
