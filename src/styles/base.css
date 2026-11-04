@@ -17,9 +17,8 @@ body {
   line-height: 1.55;
   color: var(--text);
   background:
-    radial-gradient(1200px 600px at 85% -10%, var(--bg-glow), transparent 60%),
+    radial-gradient(1200px 600px at 85% -10%, var(--bg-glow), transparent 60%) no-repeat,
     var(--bg);
-  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }

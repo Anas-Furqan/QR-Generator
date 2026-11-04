@@ -662,14 +662,16 @@ input[type='range'] {
   text-align: center;
   font-size: var(--text-sm);
   font-weight: 500;
-  color: #85828c;
-  background: #fbfaf8;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: inherit;
 }
 
 .qr-empty svg {
   width: 56px;
   height: 56px;
-  color: #d4d0c7;
+  color: var(--border-strong);
 }
 
 .encoded {
