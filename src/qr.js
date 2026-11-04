@@ -19,11 +19,40 @@ function logoImageSize(s) {
   return Math.min(1, area / ECL_RECOVERY[s.ecl]);
 }
 
+/*
+ * Each corner "eye" has two parts: the outer square ring and the inner dot.
+ * Our three simple choices map to a matching pair of library shapes.
+ */
+export const CORNER_STYLES = {
+  square: { square: 'square', dot: 'square' },
+  rounded: { square: 'extra-rounded', dot: 'dot' },
+  dot: { square: 'dot', dot: 'dot' },
+};
+
+/** The dot fill: either one solid color or a two-color gradient. */
+function dotPaint(s) {
+  if (!s.gradient) return { color: s.fg };
+  return {
+    gradient: {
+      type: s.gradientType,
+      rotation: Math.PI / 4, // 45° diagonal for linear gradients
+      colorStops: [
+        { offset: 0, color: s.fg },
+        { offset: 1, color: s.fg2 },
+      ],
+    },
+  };
+}
+
 /**
  * Translate our app state into the options object qr-code-styling expects.
  * `size` is the output size in pixels; `type` is "svg" or "canvas".
  */
 export function buildOptions(s, size, type = 'svg') {
+  const corners = CORNER_STYLES[s.cornerType];
+  // Corners use their own color if chosen, otherwise the same paint as the dots.
+  const cornerPaint = s.cornerCustom ? { color: s.cornerColor } : dotPaint(s);
+
   const options = {
     width: size,
     height: size,
@@ -31,10 +60,10 @@ export function buildOptions(s, size, type = 'svg') {
     data: s.data, // encoded exactly as-is, nothing added
     margin: Math.round((size * s.margin) / 100),
     qrOptions: { errorCorrectionLevel: s.ecl },
-    dotsOptions: { type: 'square', color: s.fg },
-    cornersSquareOptions: { type: 'square', color: s.fg },
-    cornersDotOptions: { type: 'square', color: s.fg },
-    backgroundOptions: { color: s.bg },
+    dotsOptions: { type: s.dotType, ...dotPaint(s) },
+    cornersSquareOptions: { type: corners.square, ...cornerPaint },
+    cornersDotOptions: { type: corners.dot, ...cornerPaint },
+    backgroundOptions: { color: s.transparent ? 'transparent' : s.bg },
   };
 
   if (s.logo) {
@@ -68,6 +97,27 @@ export function renderPreview(container, s, { animate = false } = {}) {
       { duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
     );
   }
+}
+
+/**
+ * Draw a tiny sample QR used as a style swatch (the Style section's picker).
+ * Using the real library means each swatch shows exactly what you'll get.
+ */
+export function renderSwatch(container, { dotType = 'square', cornerType = 'square' }) {
+  const corners = CORNER_STYLES[cornerType];
+  const qr = new QRCodeStyling({
+    width: 150,
+    height: 150,
+    type: 'svg',
+    data: 'Static QR swatch',
+    margin: 0,
+    qrOptions: { errorCorrectionLevel: 'L' },
+    dotsOptions: { type: dotType, color: '#17161b' },
+    cornersSquareOptions: { type: corners.square, color: '#17161b' },
+    cornersDotOptions: { type: corners.dot, color: '#17161b' },
+    backgroundOptions: { color: '#ffffff' },
+  });
+  qr.append(container);
 }
 
 /**
