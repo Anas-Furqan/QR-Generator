@@ -10,6 +10,7 @@ import {
   BUILDERS,
   MAX_TEXT_BYTES,
   byteLength,
+  maskWifiPassword,
   normalizePhone,
   normalizeWhatsApp,
 } from './content.js';
@@ -110,7 +111,7 @@ function render({ animate = false } = {}) {
     qrContainer.replaceChildren();
     return;
   }
-  encodedText.textContent = state.data;
+  updateEncodedText();
   try {
     renderPreview(qrContainer, state, { animate });
   } catch (err) {
@@ -121,6 +122,16 @@ function render({ animate = false } = {}) {
 }
 
 /* ================= Content: QR type tabs ================= */
+
+/**
+ * Show the exact encoded text under the QR so users can verify it. While the
+ * WiFi password field is masked, the password is masked here too (the QR
+ * itself still contains the real password).
+ */
+function updateEncodedText() {
+  const masked = state.type === 'wifi' && wifiPassword.type === 'password';
+  encodedText.textContent = masked ? maskWifiPassword(state.data) : state.data;
+}
 
 const EMPTY_MESSAGES = {
   url: 'Paste a link to see your QR code',
@@ -229,6 +240,7 @@ wifiPasswordToggle.addEventListener('click', () => {
   wifiPassword.type = show ? 'text' : 'password';
   wifiPasswordToggle.setAttribute('aria-pressed', String(show));
   wifiPasswordToggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  updateEncodedText();
 });
 
 /**

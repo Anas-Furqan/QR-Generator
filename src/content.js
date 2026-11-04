@@ -66,6 +66,13 @@ export function buildText({ text = '' }) {
 export const escapeWifi = (s) => s.replace(/([\\;,:"])/g, '\\$1');
 
 /**
+ * Replace the password in a WIFI: string with dots, for display only.
+ * The password ends at the first ";" that isn't escaped with a backslash.
+ */
+export const maskWifiPassword = (text) =>
+  text.replace(/;P:((?:\\.|[^;\\])*);/, ';P:••••••••;');
+
+/**
  * Standard format understood by iPhone and Android cameras:
  *   WIFI:T:<WPA|WEP|nopass>;S:<network name>;P:<password>;H:true;;
  */
