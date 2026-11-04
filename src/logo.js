@@ -37,6 +37,23 @@ function loadImage(src) {
   });
 }
 
+/**
+ * A tiny version of the logo for the "Recent" list (about 1–3 KB).
+ * Saving full logos in localStorage could exceed its ~5 MB limit.
+ */
+export async function makeThumbnail(src, size = 48) {
+  const img = await loadImage(src);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const w = img.naturalWidth || size;
+  const h = img.naturalHeight || size;
+  const scale = Math.min(size / w, size / h);
+  ctx.drawImage(img, (size - w * scale) / 2, (size - h * scale) / 2, w * scale, h * scale);
+  return canvas.toDataURL('image/webp', 0.7);
+}
+
 function roundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
