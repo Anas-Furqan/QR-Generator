@@ -22,6 +22,15 @@ export const DEFAULTS = Object.freeze({
   cornerCustom: false, // false = corners use the dot color
   cornerColor: '#5b3df5',
 
+  // Frame: a colored border with a text label under the QR
+  frame: false,
+  frameLabel: 'Scan me',
+  frameColor: '#000000',
+
+  // Export
+  exportFormat: 'png', // png | svg | jpeg | webp
+  exportSize: 1024, // output width in pixels
+
   // Logo
   logoSrc: null, // the original uploaded image (data URL)
   logoName: '',
@@ -43,6 +52,9 @@ export const STYLE_KEYS = [
   'transparent',
   'cornerCustom',
   'cornerColor',
+  'frame',
+  'frameLabel',
+  'frameColor',
 ];
 
 export const state = { ...DEFAULTS };
