@@ -160,7 +160,7 @@
                 </span>
                 <span class="panel-heading">
                   <span class="panel-title">Style</span>
-                  <span class="panel-sub">Error correction</span>
+                  <span class="panel-sub">Dots, corners and spacing</span>
                 </span>
                 <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
               </button>
@@ -168,6 +168,38 @@
             <div class="panel-body" id="panel-style">
               <div class="panel-inner">
                 <div class="panel-content">
+                  <!-- Swatch pictures are drawn by JS (see renderSwatch in qr.js). -->
+                  <fieldset class="field fieldset">
+                    <legend class="field-label">Dot style</legend>
+                    <div class="swatches">
+                      <label class="swatch"><input type="radio" name="dotType" value="square" checked /><span class="swatch-tile" data-dot="square"></span><span class="swatch-name">Square</span></label>
+                      <label class="swatch"><input type="radio" name="dotType" value="rounded" /><span class="swatch-tile" data-dot="rounded"></span><span class="swatch-name">Rounded</span></label>
+                      <label class="swatch"><input type="radio" name="dotType" value="dots" /><span class="swatch-tile" data-dot="dots"></span><span class="swatch-name">Dots</span></label>
+                      <label class="swatch"><input type="radio" name="dotType" value="classy" /><span class="swatch-tile" data-dot="classy"></span><span class="swatch-name">Classy</span></label>
+                      <label class="swatch"><input type="radio" name="dotType" value="extra-rounded" /><span class="swatch-tile" data-dot="extra-rounded"></span><span class="swatch-name">Extra round</span></label>
+                    </div>
+                  </fieldset>
+
+                  <fieldset class="field fieldset">
+                    <legend class="field-label">Corner style</legend>
+                    <div class="swatches">
+                      <label class="swatch"><input type="radio" name="cornerType" value="square" checked /><span class="swatch-tile swatch-corner" data-corner="square"></span><span class="swatch-name">Square</span></label>
+                      <label class="swatch"><input type="radio" name="cornerType" value="rounded" /><span class="swatch-tile swatch-corner" data-corner="rounded"></span><span class="swatch-name">Rounded</span></label>
+                      <label class="swatch"><input type="radio" name="cornerType" value="dot" /><span class="swatch-tile swatch-corner" data-corner="dot"></span><span class="swatch-name">Dot</span></label>
+                    </div>
+                  </fieldset>
+
+                  <div class="field">
+                    <div class="field-row">
+                      <label class="field-label" for="margin">Margin (quiet zone)</label>
+                      <output id="margin-value" class="field-value" for="margin">8%</output>
+                    </div>
+                    <input id="margin" type="range" min="0" max="20" step="1" value="8" />
+                    <p id="margin-warning" class="hint hint-warning" hidden>
+                      A very thin margin can stop phones finding the code, especially on dark surfaces.
+                    </p>
+                  </div>
+
                   <fieldset class="field fieldset">
                     <legend class="field-label">Error correction</legend>
                     <div class="segmented" id="ecl-group">
@@ -192,7 +224,7 @@
                 </span>
                 <span class="panel-heading">
                   <span class="panel-title">Colors</span>
-                  <span class="panel-sub">Foreground and background</span>
+                  <span class="panel-sub">Presets, gradients and background</span>
                 </span>
                 <svg class="panel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
               </button>
@@ -200,20 +232,76 @@
             <div class="panel-body" id="panel-colors">
               <div class="panel-inner">
                 <div class="panel-content">
+                  <div class="field">
+                    <span class="field-label" id="presets-label">Presets</span>
+                    <!-- Preset buttons are built from presets.js -->
+                    <div id="presets" class="presets" role="group" aria-labelledby="presets-label"></div>
+                  </div>
+
                   <div class="color-grid">
                     <label class="color-field">
                       <input id="fg-color" type="color" value="#000000" />
-                      <span>Foreground<code id="fg-value">#000000</code></span>
+                      <span><span id="fg-label">Foreground</span><code id="fg-value">#000000</code></span>
                     </label>
-                    <label class="color-field">
+                    <label class="color-field" id="bg-field">
                       <input id="bg-color" type="color" value="#ffffff" />
                       <span>Background<code id="bg-value">#ffffff</code></span>
                     </label>
                   </div>
+
+                  <div class="option-group">
+                    <label class="switch">
+                      <span>Gradient dots</span>
+                      <input id="gradient-toggle" type="checkbox" />
+                    </label>
+                    <div id="gradient-options" class="sub-options" hidden>
+                      <div class="segmented" role="radiogroup" aria-label="Gradient type">
+                        <label><input type="radio" name="gradientType" value="linear" checked /><span>Linear</span></label>
+                        <label><input type="radio" name="gradientType" value="radial" /><span>Radial</span></label>
+                      </div>
+                      <label class="color-field">
+                        <input id="fg2-color" type="color" value="#5b3df5" />
+                        <span>Second color<code id="fg2-value">#5b3df5</code></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="option-group">
+                    <label class="switch">
+                      <span>Different corner color</span>
+                      <input id="corner-toggle" type="checkbox" />
+                    </label>
+                    <div id="corner-options" class="sub-options" hidden>
+                      <label class="color-field">
+                        <input id="corner-color" type="color" value="#5b3df5" />
+                        <span>Corner color<code id="cornerColor-value">#5b3df5</code></span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="option-group">
+                    <label class="switch">
+                      <span>
+                        Transparent background
+                        <small class="switch-hint">For PNG and SVG. Place it on a light surface.</small>
+                      </span>
+                      <input id="transparent-toggle" type="checkbox" />
+                    </label>
+                  </div>
+
+                  <p id="contrast-warning" class="note note-warning" role="status" hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                    <span id="contrast-message"></span>
+                  </p>
                 </div>
               </div>
             </div>
           </section>
+
+          <button id="reset-style" class="btn btn-ghost" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset style to default
+          </button>
         </div>
 
         <!-- ============ Preview (right on desktop, top on mobile) ============ -->
@@ -231,6 +319,11 @@
                 <span>Paste a link to see your QR code</span>
               </div>
             </div>
+
+            <p id="preview-warning" class="preview-warning" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+              Low contrast: phones may not scan this
+            </p>
 
             <p id="encoded-wrap" class="encoded" hidden>
               Encodes <code id="encoded-text"></code>
