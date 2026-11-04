@@ -76,7 +76,7 @@ No configuration file is needed. Vercel detects Vite automatically.
    - Framework Preset: **Vite**
    - Build Command: `npm run build`
    - Output Directory: `dist`
-5. Click **Deploy**. After about a minute you'll get a live URL like `your-project.vercel.app`.
+5. Click **Deploy**. After about a minute you'll get a live URL like `qr-generator-anas.vercel.app`.
 
 Every later `git push` to the main branch redeploys automatically.
 
