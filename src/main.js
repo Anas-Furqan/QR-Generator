@@ -16,10 +16,20 @@ import {
   normalizeWhatsApp,
 } from './content.js';
 import { renderPreview, renderSwatch } from './qr.js';
-import { contrastProblem } from './color.js';
+import { contrastProblem, readableTextColor } from './color.js';
 import { PRESETS } from './presets.js';
-import { validateLogoFile, readAsDataURL, composeLogo } from './logo.js';
-import { downloadQR } from './export.js';
+import { validateLogoFile, readAsDataURL, composeLogo, makeThumbnail } from './logo.js';
+import {
+  FORMATS,
+  canCopyImage,
+  canShareFiles,
+  copyQR,
+  downloadQR,
+  labelFontRatio,
+  shareQR,
+} from './export.js';
+import { verifyScan } from './verify.js';
+import { addToHistory, clearHistory, loadHistory } from './history.js';
 import { debounce, initPanels, initThemeToggle, toast } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
@@ -45,7 +55,25 @@ const qrContainer = $('qr-container');
 const qrEmpty = $('qr-empty');
 const encodedWrap = $('encoded-wrap');
 const encodedText = $('encoded-text');
-const downloadButtons = [$('download-png'), $('download-svg'), $('mobile-download')];
+const frameLabelEl = $('qr-frame-label');
+const scanBadge = $('scan-badge');
+const downloadBtn = $('download-btn');
+const copyBtn = $('copy-btn');
+const shareBtn = $('share-btn');
+const mobileDownload = $('mobile-download');
+const mobileShare = $('mobile-share');
+// Every button that needs a QR to work (disabled while the preview is empty).
+const actionButtons = [downloadBtn, copyBtn, shareBtn, mobileDownload, mobileShare];
+
+const frameToggle = $('frame-toggle');
+const frameOptions = $('frame-options');
+const frameLabelInput = $('frame-label');
+const formatRadios = document.querySelectorAll('input[name="exportFormat"]');
+const sizeRadios = document.querySelectorAll('input[name="exportSize"]');
+
+const historyList = $('history-list');
+const historyEmpty = $('history-empty');
+const historyClear = $('history-clear');
 
 const logoDropzone = $('logo-dropzone');
 const logoInput = $('logo-input');
@@ -88,6 +116,7 @@ const colorInputs = [
   [$('fg2-color'), 'fg2'],
   [$('bg-color'), 'bg'],
   [$('corner-color'), 'cornerColor'],
+  [$('frame-color'), 'frameColor'],
 ];
 
 /* ================= Rendering ================= */
@@ -106,17 +135,36 @@ function updateWarnings() {
   densityMessage.textContent = density?.message ?? '';
 }
 
+/**
+ * Show the frame around the live preview. It's drawn with CSS using the same
+ * proportions as the exported image (see FRAME in export.js).
+ */
+function updateFramePreview(hasData) {
+  const framed = state.frame && hasData;
+  const label = state.frameLabel.trim();
+  stage.classList.toggle('is-framed', framed);
+  stage.classList.toggle('no-label', framed && !label);
+  frameLabelEl.hidden = !framed || !label;
+  if (!framed) return;
+  stage.style.setProperty('--frame-color', state.frameColor);
+  stage.style.setProperty('--frame-text', readableTextColor(state.frameColor));
+  stage.style.setProperty('--label-size', `${labelFontRatio(label || 'x') * 100}cqw`);
+  frameLabelEl.textContent = label;
+}
+
 /** Redraw the preview (or the empty state) from the current state. */
 function render({ animate = false } = {}) {
   const hasData = Boolean(state.data);
   qrEmpty.hidden = hasData;
   encodedWrap.hidden = !hasData;
-  for (const button of downloadButtons) button.disabled = !hasData;
-  stage.classList.toggle('is-transparent', state.transparent && hasData);
+  for (const button of actionButtons) button.disabled = !hasData;
+  stage.classList.toggle('is-transparent', state.transparent && hasData && !state.frame);
+  updateFramePreview(hasData);
   updateWarnings();
 
   if (!hasData) {
     qrContainer.replaceChildren();
+    scanBadge.hidden = true;
     return;
   }
   updateEncodedText();
@@ -126,8 +174,42 @@ function render({ animate = false } = {}) {
     // The QR library throws if the content can't fit in any QR size.
     console.error(err);
     showError('That’s too much content for one QR code. Please shorten it.');
+    scanBadge.hidden = true;
+    return;
   }
+  showScanState('checking');
+  scheduleVerify();
 }
+
+/* ================= Scan check ================= */
+
+const SCAN_MESSAGES = {
+  checking: 'Checking that it scans…',
+  ok: '✅ Scans correctly',
+  warn: '⚠️ May be hard to scan on some phones',
+  fail: '⚠️ May not scan — reduce logo size or increase contrast',
+};
+
+function showScanState(result) {
+  scanBadge.hidden = false;
+  scanBadge.dataset.state = result;
+  scanBadge.textContent = SCAN_MESSAGES[result];
+}
+
+// Each check gets a number; results from an older check (the user kept
+// changing things meanwhile) are ignored.
+let verifyRun = 0;
+const scheduleVerify = debounce(async () => {
+  const run = ++verifyRun;
+  const snapshot = { ...state };
+  try {
+    const result = await verifyScan(snapshot);
+    if (run === verifyRun && snapshot.data === state.data) showScanState(result);
+  } catch (err) {
+    console.error(err);
+    if (run === verifyRun) scanBadge.hidden = true;
+  }
+}, 400);
 
 /* ================= Content: QR type tabs ================= */
 
@@ -418,6 +500,16 @@ function syncControls() {
   transparentNote.hidden = !state.transparent;
   bgField.classList.toggle('is-disabled', state.transparent);
 
+  frameToggle.checked = state.frame;
+  frameOptions.hidden = !state.frame;
+  if (frameLabelInput.value !== state.frameLabel) frameLabelInput.value = state.frameLabel;
+
+  checkRadio(formatRadios, state.exportFormat);
+  checkRadio(sizeRadios, String(state.exportSize));
+  for (const label of document.querySelectorAll('.download-label')) {
+    label.textContent = `Download ${FORMATS[state.exportFormat].label}`;
+  }
+
   syncPresets();
 }
 
@@ -512,27 +604,222 @@ $('reset-style').addEventListener('click', () => {
   toast('Style reset to default');
 });
 
-/* ================= Downloads ================= */
+/* ================= Frame + export settings ================= */
 
-async function download(extension) {
+frameToggle.addEventListener('change', () => setStyle('frame', frameToggle.checked));
+frameLabelInput.addEventListener('input', () => setStyle('frameLabel', frameLabelInput.value));
+for (const chip of document.querySelectorAll('[data-label]')) {
+  chip.addEventListener('click', () => setStyle('frameLabel', chip.dataset.label));
+}
+// Export settings don't change the preview, so no re-render needed.
+for (const radio of formatRadios) {
+  radio.addEventListener('change', () => {
+    state.exportFormat = radio.value;
+    syncControls();
+  });
+}
+for (const radio of sizeRadios) {
+  radio.addEventListener('change', () => {
+    state.exportSize = Number(radio.value);
+    syncControls();
+  });
+}
+
+/* ================= Download, copy, share ================= */
+
+async function download() {
   if (!state.data) return;
   try {
-    const filename = await downloadQR(state, extension);
+    const filename = await downloadQR(state);
     toast(`Downloaded ${filename}`);
+    saveRecent();
   } catch (err) {
     console.error(err);
     toast('Download failed. Please try again.', 'error');
   }
 }
 
-$('download-png').addEventListener('click', () => download('png'));
-$('download-svg').addEventListener('click', () => download('svg'));
-$('mobile-download').addEventListener('click', () => download('png'));
+async function copy() {
+  if (!state.data) return;
+  if (!canCopyImage()) {
+    toast('This browser can’t copy images. Use Download instead.', 'error');
+    return;
+  }
+  try {
+    await copyQR(state);
+    toast('Copied to clipboard');
+    saveRecent();
+  } catch (err) {
+    console.error(err);
+    toast('Copying was blocked by the browser. Use Download instead.', 'error');
+  }
+}
+
+async function share() {
+  if (!state.data) return;
+  try {
+    await shareQR(state);
+    saveRecent();
+  } catch (err) {
+    // AbortError = the user closed the share sheet; that's not an error.
+    if (err.name === 'AbortError') return;
+    console.error(err);
+    toast('Sharing failed. Use Download instead.', 'error');
+  }
+}
+
+downloadBtn.addEventListener('click', download);
+mobileDownload.addEventListener('click', download);
+copyBtn.addEventListener('click', copy);
+shareBtn.addEventListener('click', share);
+mobileShare.addEventListener('click', share);
+
+/* ================= Recent QRs ================= */
+
+// Settings saved with each entry (besides the content fields).
+const SAVED_STYLE_KEYS = [...STYLE_KEYS, 'ecl', 'logoSize', 'logoPlate'];
+
+/** Short, safe-to-store description of the QR for the Recent list. */
+function describe(type, fields) {
+  switch (type) {
+    case 'url':
+      return fields.url.trim();
+    case 'text':
+      return fields.text.trim().slice(0, 60);
+    case 'wifi':
+      return `WiFi · ${fields.ssid}`;
+    case 'whatsapp':
+      return `WhatsApp · ${normalizeWhatsApp(fields.phone).display ?? fields.phone}`;
+    case 'email':
+      return `Email · ${fields.to.trim()}`;
+    default:
+      return `Call · ${normalizePhone(fields.phone).display ?? fields.phone}`;
+  }
+}
+
+async function saveRecent() {
+  const fields = readFields(state.type);
+  let logoThumb;
+  try {
+    if (state.logoSrc) logoThumb = await makeThumbnail(state.logoSrc);
+  } catch {
+    // No thumbnail is fine.
+  }
+  const saved = addToHistory({
+    type: state.type,
+    fields, // addToHistory removes the WiFi password before saving
+    style: Object.fromEntries(SAVED_STYLE_KEYS.map((k) => [k, state[k]])),
+    title: describe(state.type, fields),
+    logoName: state.logoName,
+    logoThumb,
+    savedAt: Date.now(),
+  });
+  if (!saved) toast('Couldn’t save to Recent: browser storage is full or blocked.', 'error');
+  renderHistory();
+}
+
+function timeAgo(ms) {
+  const minutes = Math.round((Date.now() - ms) / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Date(ms).toLocaleDateString();
+}
+
+/** Build the Recent list. Text is set with textContent, never as HTML. */
+function renderHistory() {
+  const entries = loadHistory();
+  historyList.replaceChildren();
+  historyEmpty.hidden = entries.length > 0;
+  historyClear.hidden = entries.length === 0;
+
+  for (const entry of entries) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'history-item';
+
+    const icon = document.createElement('span');
+    icon.className = 'history-icon';
+    if (typeof entry.logoThumb === 'string' && entry.logoThumb.startsWith('data:image/')) {
+      const img = document.createElement('img');
+      img.src = entry.logoThumb;
+      img.alt = '';
+      icon.append(img);
+    } else {
+      // Reuse the matching tab's icon.
+      const tab = tabs.find((t) => t.dataset.type === entry.type);
+      icon.append(tab.querySelector('svg').cloneNode(true));
+    }
+
+    const text = document.createElement('span');
+    text.className = 'history-text';
+    const title = document.createElement('span');
+    title.className = 'history-title';
+    title.textContent = String(entry.title ?? '');
+    const meta = document.createElement('span');
+    meta.className = 'history-meta';
+    const typeName = tabs.find((t) => t.dataset.type === entry.type).textContent.trim();
+    meta.textContent = `${typeName} · ${timeAgo(Number(entry.savedAt) || Date.now())}`;
+    text.append(title, meta);
+
+    button.append(icon, text);
+    button.addEventListener('click', () => restoreEntry(entry));
+    const li = document.createElement('li');
+    li.append(button);
+    historyList.append(li);
+  }
+}
+
+/** Put a saved QR back into the form and controls. */
+function restoreEntry(entry) {
+  // Content fields (the WiFi password was never saved, so it starts empty).
+  for (const el of panelFor(entry.type).querySelectorAll('[name]')) {
+    const value = entry.fields[el.name];
+    if (el.type === 'checkbox') el.checked = Boolean(value);
+    else el.value = typeof value === 'string' ? value : '';
+  }
+
+  // Style settings: only copy known keys with the right type.
+  for (const key of SAVED_STYLE_KEYS) {
+    if (typeof entry.style[key] === typeof DEFAULTS[key]) state[key] = entry.style[key];
+  }
+  setEcl(state.ecl);
+  logoSize.value = state.logoSize;
+  logoSizeValue.textContent = `${state.logoSize}%`;
+  logoPlate.checked = state.logoPlate;
+  syncControls();
+  updateHelpers();
+  selectTab(entry.type);
+  render({ animate: true });
+
+  if (entry.type === 'wifi' && entry.fields.security !== 'nopass') {
+    toast('Enter the WiFi password again. It’s never saved.');
+    wifiPassword.focus();
+  } else if (entry.logoName && !state.logo) {
+    toast('Logos aren’t kept in Recent. Upload it again if you need it.');
+  }
+}
+
+historyClear.addEventListener('click', () => {
+  clearHistory();
+  renderHistory();
+  toast('History cleared');
+});
 
 /* ================= Start ================= */
+
+// Only show Share where the browser can share real image files (mostly phones).
+const shareSupported = canShareFiles();
+shareBtn.hidden = !shareSupported;
+mobileShare.hidden = !shareSupported;
 
 initPanels();
 initThemeToggle();
 syncControls();
 updateHelpers();
+renderHistory();
 render();
+
+// The frame label is measured with the web font, so redraw once it has loaded.
+document.fonts?.ready.then(() => render());
