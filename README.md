@@ -2,7 +2,7 @@
 
 A small, ad-free QR code generator that runs entirely in your browser.
 
-**Live demo:** https://your-project.vercel.app <!-- TODO: replace with your Vercel URL after deploying -->
+**Live demo:** https://qr-generator-anas.vercel.app <!-- TODO: replace with your Vercel URL after deploying -->
 
 | Light | Dark |
 | --- | --- |
